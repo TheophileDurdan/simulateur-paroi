@@ -59,6 +59,7 @@ let schedulePoints: SchedulePoint[] = defaultSchedule();
 let facade: FacadeOrientation = { ...defaultPreset.facade };
 let solarSite: SolarSite = { ...DEFAULT_SOLAR_SITE };
 solver.setFacade(facade);
+solver.setSkyCover(solarSite.skyCover);
 let draggingExt = false;
 let scheduleDrag: ScheduleDragState | null = null;
 let seriesVisible: ChartSeriesVisibility = { ...DEFAULT_SERIES_VISIBILITY };
@@ -99,9 +100,11 @@ const panel = createPanel(
       facade = { tiltFromHorizontal: tilt, azimuthFacing: azimuth };
       solarSite = { ...site };
       solver.setFacade(facade);
+      solver.setSkyCover(site.skyCover ?? "clear");
     },
     onClimatePresetApply(site, schedule, initialTemp) {
       solarSite = { ...site };
+      solver.setSkyCover(site.skyCover ?? "clear");
       schedulePoints = schedule.map((p) => ({ ...p }));
       solver.resetTemps();
       solver.tAirInt = initialTemp;

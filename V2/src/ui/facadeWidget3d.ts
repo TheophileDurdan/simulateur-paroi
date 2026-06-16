@@ -18,6 +18,7 @@ import {
   solarNoonAltitudeDeg,
   sunDirectionUnit,
 } from "../facadeGeometry";
+import { skyCoverOptionsHtml } from "../skyCover";
 import {
   CLIMATE_PRESETS,
   DEFAULT_CLIMATE_PRESET_ID,
@@ -215,6 +216,9 @@ export function createFacadeWidget3D(
           <label class="facade-site-field">Date
             <input id="site-date" type="date" value="${initialSite.dateISO}" />
           </label>
+          <label class="facade-site-field">Couverture du ciel
+            <select id="site-sky-cover">${skyCoverOptionsHtml(initialSite.skyCover)}</select>
+          </label>
           <label class="facade-site-field facade-heating-field">
             Chauffage / clim.
             <input id="site-heating" type="range" min="-100" max="100" step="1" value="0" />
@@ -235,6 +239,7 @@ export function createFacadeWidget3D(
   const latInput = container.querySelector<HTMLInputElement>("#site-lat")!;
   const presetSelect = container.querySelector<HTMLSelectElement>("#site-preset")!;
   const dateInput = container.querySelector<HTMLInputElement>("#site-date")!;
+  const skyCoverSelect = container.querySelector<HTMLSelectElement>("#site-sky-cover")!;
   const heatingInput = container.querySelector<HTMLInputElement>("#site-heating")!;
   const heatingValEl = container.querySelector<HTMLSpanElement>("#site-heating-val")!;
   const declEl = container.querySelector<HTMLSpanElement>("#site-decl")!;
@@ -330,12 +335,17 @@ export function createFacadeWidget3D(
   }
 
   function readSiteFromInputs(): SolarSite {
-    return parseSolarSite(parseFloat(latInput.value) || 0, dateInput.value);
+    return parseSolarSite(
+      parseFloat(latInput.value) || 0,
+      dateInput.value,
+      skyCoverSelect.value as SolarSite["skyCover"],
+    );
   }
 
   function syncSiteInputs() {
     latInput.value = String(site.latitudeDeg);
     dateInput.value = site.dateISO;
+    skyCoverSelect.value = site.skyCover;
     presetSelect.value = activePresetId;
   }
 
@@ -420,6 +430,7 @@ export function createFacadeWidget3D(
 
   latInput.addEventListener("change", onSiteFieldChange);
   dateInput.addEventListener("change", onSiteFieldChange);
+  skyCoverSelect.addEventListener("change", onSiteFieldChange);
   presetSelect.addEventListener("change", () => {
     applyClimatePreset(presetSelect.value as ClimatePresetId);
   });

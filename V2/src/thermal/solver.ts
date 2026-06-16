@@ -1,4 +1,6 @@
 import type { FacadeOrientation } from "../facadeGeometry";
+import type { SkyCover } from "../skyCover";
+import { DEFAULT_SKY_COVER } from "../skyCover";
 import { hCavityConvection, hCavitySurface, hCavityToExterior, cavityAirCapacitance, hExterior, hInterior, ventilationHeatCoeff } from "./convection";
 import {
   buildMesh,
@@ -31,6 +33,7 @@ export class ThermalSolver {
   tExt = INITIAL_TEMP;
   simTime = 0;
   facade: FacadeOrientation = { tiltFromHorizontal: 90, azimuthFacing: 180 };
+  skyCover: SkyCover = DEFAULT_SKY_COVER;
   /** Renouvellements d'air int. ↔ ext. (volumes/heure). */
   ventilationAch = DEFAULT_VENTILATION_ACH;
   /** Apport thermique air int. (W/m²), + = chauffe, − = refroidit. */
@@ -43,6 +46,10 @@ export class ThermalSolver {
 
   setFacade(facade: FacadeOrientation) {
     this.facade = { ...facade };
+  }
+
+  setSkyCover(cover: SkyCover) {
+    this.skyCover = cover;
   }
 
   setVentilationAch(achPerHour: number) {
@@ -231,7 +238,7 @@ export class ThermalSolver {
     const tSurf = wallTemps[0];
     const epsSurf = nodes[0].epsilon;
     const fSky = skyViewFactor(this.facade.tiltFromHorizontal);
-    const tSky = effectiveSkyTempC(tExt);
+    const tSky = effectiveSkyTempC(tExt, this.skyCover);
     const qConvExt = hExt * (tExt - tSurf);
     const qSkyRad = skyRadiationFlux(tSurf, tSky, epsSurf, fSky);
 

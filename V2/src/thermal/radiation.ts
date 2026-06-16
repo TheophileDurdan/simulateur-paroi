@@ -1,3 +1,5 @@
+import type { SkyCover } from "../skyCover";
+import { DEFAULT_SKY_COVER } from "../skyCover";
 import { STEFAN_BOLTZMANN } from "../types";
 
 export function kelvin(celsius: number): number {
@@ -35,10 +37,24 @@ export function skyViewFactor(tiltFromHorizontalDeg: number): number {
   return (1 + Math.cos(beta)) / 2;
 }
 
-/** Température effective du ciel pour le rayonnement IR (Swinbank, ciel clair), °C. */
-export function effectiveSkyTempC(tExtC: number): number {
+/**
+ * Température effective du ciel pour le rayonnement IR, °C.
+ * Ciel dégagé : Swinbank (ciel froid). Voilé / couvert : rapprochement de T_air.
+ */
+export function effectiveSkyTempC(
+  tExtC: number,
+  skyCover: SkyCover = DEFAULT_SKY_COVER,
+): number {
   const TairK = kelvin(tExtC);
-  return 0.0552 * TairK ** 1.5 - 273.15;
+  const tClear = 0.0552 * TairK ** 1.5 - 273.15;
+  switch (skyCover) {
+    case "clear":
+      return tClear;
+    case "hazy":
+      return 0.4 * tClear + 0.6 * (tExtC - 5);
+    case "overcast":
+      return tExtC - 1.5;
+  }
 }
 
 /**

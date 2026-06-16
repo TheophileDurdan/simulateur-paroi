@@ -3,6 +3,12 @@ import {
   parisHeatwaveDateISO,
 } from "./presets/parisHeatwave";
 import { HOURS_PER_DAY } from "./schedule";
+import {
+  DEFAULT_SKY_COVER,
+  SKY_COVER_LABELS,
+  skyCoverSolarFactor,
+  type SkyCover,
+} from "./skyCover";
 import type { SolarPoint } from "./solarSchedule";
 
 export const DEFAULT_LAT_DEG = PARIS_LAT_DEG;
@@ -22,6 +28,8 @@ export interface SolarSite {
   latitudeDeg: number;
   /** Date locale AAAA-MM-JJ (détermine la déclinaison solaire). */
   dateISO: string;
+  /** Couverture du ciel (influence soleil et rayonnement IR). */
+  skyCover: SkyCover;
 }
 
 export function defaultSeasonDateISO(): string {
@@ -31,6 +39,7 @@ export function defaultSeasonDateISO(): string {
 export const DEFAULT_SOLAR_SITE: SolarSite = {
   latitudeDeg: PARIS_LAT_DEG,
   dateISO: parisHeatwaveDateISO(),
+  skyCover: DEFAULT_SKY_COVER,
 };
 
 export const DEFAULT_FACADE: FacadeOrientation = {
@@ -66,10 +75,15 @@ export function clampLatitude(lat: number): number {
   return Math.min(70, Math.max(-60, lat));
 }
 
-export function parseSolarSite(latitudeDeg: number, dateISO: string): SolarSite {
+export function parseSolarSite(
+  latitudeDeg: number,
+  dateISO: string,
+  skyCover: SkyCover = DEFAULT_SKY_COVER,
+): SolarSite {
   return {
     latitudeDeg: clampLatitude(latitudeDeg),
     dateISO,
+    skyCover,
   };
 }
 
@@ -133,7 +147,7 @@ export function facadeBeamFactor(
   return Math.max(0, cosInc);
 }
 
-/** Facteur 0–1 à l'heure donnée (évaluation directe, pas d'interpolation circulaire). */
+/** Facteur 0–1 à l'heure donnée (géométrie + couverture du ciel). */
 export function solarFactorAt(
   hourOfDay: number,
   facade: FacadeOrientation,
@@ -141,7 +155,9 @@ export function solarFactorAt(
 ): number {
   const h = ((hourOfDay % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
   const decl = solarDeclination(site);
-  return facadeBeamFactor(h, facade, site.latitudeDeg, decl);
+  const beam = facadeBeamFactor(h, facade, site.latitudeDeg, decl);
+  const sunUp = sunPosition(h, site.latitudeDeg, decl) !== null;
+  return skyCoverSolarFactor(beam, sunUp, site.skyCover ?? DEFAULT_SKY_COVER);
 }
 
 export function solarPercentAt(
@@ -157,12 +173,11 @@ export function computeSolarProfile(
   facade: FacadeOrientation,
   site: SolarSite = DEFAULT_SOLAR_SITE,
 ): SolarPoint[] {
-  const decl = solarDeclination(site);
   const points: SolarPoint[] = [];
   for (let h = 0; h < HOURS_PER_DAY; h++) {
     points.push({
       hour: h,
-      percent: Math.round(facadeBeamFactor(h, facade, site.latitudeDeg, decl) * 1000) / 10,
+      percent: Math.round(solarFactorAt(h, facade, site) * 1000) / 10,
     });
   }
   return points;
@@ -183,7 +198,8 @@ export function solarSiteSummary(site: SolarSite): string {
   const [, mm, dd] = site.dateISO.split("-");
   const alt = solarNoonAltitudeDeg(site);
   const altStr = alt !== null ? `, αₘ=${alt.toFixed(0)}°` : ", nuit polaire";
-  return `${lat}, ${dd}/${mm} (δ=${decl.toFixed(1)}°${altStr})`;
+  const cover = SKY_COVER_LABELS[site.skyCover ?? DEFAULT_SKY_COVER];
+  return `${lat}, ${dd}/${mm} (δ=${decl.toFixed(1)}°${altStr}) · ${cover}`;
 }
 
 export function facadeLabel(facade: FacadeOrientation): string {
