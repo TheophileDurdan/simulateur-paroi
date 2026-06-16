@@ -5,6 +5,7 @@ import {
   type WallPresetId,
 } from "../presets/wallPresets";
 import type { Layer, SimSpeed } from "../types";
+import { isLayerEnabled } from "../types";
 import { DEFAULT_VENTILATION_ACH } from "../types";
 import { simTimeToHour } from "../schedule";
 
@@ -197,24 +198,30 @@ export function createPanel(
   });
   updatePresetButtons();
 
+  function enabledLayerCount() {
+    return layers.filter(isLayerEnabled).length;
+  }
+
   function renderLayers() {
     layersList.innerHTML = "";
     layers.forEach((layer, index) => {
       const preset = getMaterial(layer.materialId);
+      const enabled = isLayerEnabled(layer);
       const isGap =
         preset.kind === "air_gap" ||
         preset.kind === "air_gap_ventilated" ||
         preset.kind === "air_gap_open";
       const isFilm = preset.kind === "thin_film";
       const row = document.createElement("div");
-      row.className = "layer-row";
+      row.className = enabled ? "layer-row" : "layer-row layer-row-disabled";
+      const disabledAttr = enabled ? "" : "disabled";
       row.innerHTML = `
         <div class="layer-order">
-          <button type="button" class="btn-move" data-dir="-1" title="Monter">▲</button>
-          <button type="button" class="btn-move" data-dir="1" title="Descendre">▼</button>
+          <button type="button" class="btn-move" data-dir="-1" title="Monter" ${disabledAttr}>▲</button>
+          <button type="button" class="btn-move" data-dir="1" title="Descendre" ${disabledAttr}>▼</button>
         </div>
-        <input type="color" class="layer-color" value="${layer.color ?? preset.color}" title="Couleur" />
-        <select class="layer-material">
+        <input type="color" class="layer-color" value="${layer.color ?? preset.color}" title="Couleur" ${disabledAttr} />
+        <select class="layer-material" ${disabledAttr}>
           ${MATERIAL_CATEGORIES.map(
             (cat) => `
             <optgroup label="${cat.label}">
@@ -228,7 +235,7 @@ export function createPanel(
           ).join("")}
         </select>
         <label class="layer-field">e (mm)
-          <input type="number" class="layer-thick" min="${isGap ? 5 : isFilm ? 0.1 : 1}" step="${isFilm ? 0.1 : 1}" value="${layer.thicknessMm}" />
+          <input type="number" class="layer-thick" min="${isGap ? 5 : isFilm ? 0.1 : 1}" step="${isFilm ? 0.1 : 1}" value="${layer.thicknessMm}" ${disabledAttr} />
         </label>
         ${
           isGap
@@ -241,24 +248,27 @@ export function createPanel(
               }</span>`
             : isFilm
               ? `<label class="layer-field" title="Émissivité infrarouge (face cavité)">ε
-          <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" />
+          <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" ${disabledAttr} />
         </label>
         <span class="layer-gap-hint">Feuille mince (sans inertie)</span>`
               : `
         <label class="layer-field">ρ
-          <input type="number" class="layer-rho" min="1" step="1" value="${layer.rho ?? preset.rho}" />
+          <input type="number" class="layer-rho" min="1" step="1" value="${layer.rho ?? preset.rho}" ${disabledAttr} />
         </label>
         <label class="layer-field">cp
-          <input type="number" class="layer-cp" min="1" step="1" value="${layer.cp ?? preset.cp}" />
+          <input type="number" class="layer-cp" min="1" step="1" value="${layer.cp ?? preset.cp}" ${disabledAttr} />
         </label>
         <label class="layer-field">λ
-          <input type="number" class="layer-lambda" min="0.001" step="0.001" value="${layer.lambda ?? preset.lambda}" />
+          <input type="number" class="layer-lambda" min="0.001" step="0.001" value="${layer.lambda ?? preset.lambda}" ${disabledAttr} />
         </label>
         <label class="layer-field" title="Émissivité infrarouge">ε
-          <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" />
+          <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" ${disabledAttr} />
         </label>`
         }
-        <button type="button" class="btn-remove" title="Supprimer">✕</button>
+        <div class="layer-actions">
+          <button type="button" class="btn-toggle ${enabled ? "is-enabled" : "is-disabled"}" title="${enabled ? "Désactiver la couche" : "Activer la couche"}">${enabled ? "✓" : "✕"}</button>
+          <button type="button" class="btn-delete" title="Supprimer la couche">🗑</button>
+        </div>
       `;
 
       row.querySelector(".layer-color")!.addEventListener("input", (e) => {
@@ -323,9 +333,23 @@ export function createPanel(
         });
       });
 
-      row.querySelector(".btn-remove")!.addEventListener("click", () => {
+      row.querySelector(".btn-toggle")!.addEventListener("click", () => {
+        if (enabled) {
+          if (enabledLayerCount() <= 1) return;
+          layer.enabled = false;
+        } else {
+          layer.enabled = true;
+        }
+        renderLayers();
+        emit();
+      });
+
+      row.querySelector(".btn-delete")!.addEventListener("click", () => {
         if (layers.length <= 1) return;
         layers.splice(index, 1);
+        if (enabledLayerCount() === 0 && layers.length > 0) {
+          layers[0].enabled = true;
+        }
         renderLayers();
         emit();
       });
@@ -354,6 +378,7 @@ export function createPanel(
       id: crypto.randomUUID(),
       materialId: p.id,
       thicknessMm: 50,
+      enabled: true,
       rho: p.rho,
       cp: p.cp,
       lambda: p.lambda,

@@ -26,12 +26,22 @@ export interface Layer {
   id: string;
   materialId: string;
   thicknessMm: number;
+  /** Si false, la couche est ignorée par la simulation mais conservée dans la liste. */
+  enabled?: boolean;
   rho?: number;
   cp?: number;
   lambda?: number;
   epsilon?: number;
   alphaSolar?: number;
   color?: string;
+}
+
+export function isLayerEnabled(layer: Layer): boolean {
+  return layer.enabled !== false;
+}
+
+export function activeLayers(layers: Layer[]): Layer[] {
+  return layers.filter(isLayerEnabled);
 }
 
 export interface NodeProps {

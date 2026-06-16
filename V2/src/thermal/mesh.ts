@@ -1,6 +1,6 @@
 import { resolveLayer } from "../materials";
 import type { Layer, NodeProps } from "../types";
-import { DX } from "../types";
+import { activeLayers, DX } from "../types";
 
 export interface AirGapLink {
   leftNodeIndex: number;
@@ -87,6 +87,7 @@ function buildInterfaces(
 }
 
 export function buildMesh(layers: Layer[]): ThermalMesh {
+  const active = activeLayers(layers);
   const nodes: NodeProps[] = [];
   const positionsMm: number[] = [];
   const gaps: AirGapLink[] = [];
@@ -96,7 +97,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
   let pendingFilm: PendingFilm | null = null;
   let pos = 0.5;
 
-  for (const layer of layers) {
+  for (const layer of active) {
     const props = resolveLayer(layer);
 
     if (

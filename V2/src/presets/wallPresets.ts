@@ -11,7 +11,7 @@ export interface WallPreset {
 }
 
 function layer(materialId: string, thicknessMm: number): Layer {
-  return { id: crypto.randomUUID(), materialId, thicknessMm };
+  return { id: crypto.randomUUID(), materialId, thicknessMm, enabled: true };
 }
 
 /** Toit 35° sud : couverture + lame ventilée + Al + laine de roche + placo. */
