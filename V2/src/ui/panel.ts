@@ -52,7 +52,7 @@ export function createPanel(
     <div class="panel-row panel-title">
       <h1>Paroi multicouche V2 — convection &amp; rayonnement</h1>
       <div class="sim-controls">
-        <button id="btn-play" type="button">▶ Lecture</button>
+        <button id="btn-play" type="button" aria-pressed="false">▶ Lecture</button>
         <label>Vitesse
           <select id="sel-speed">
             <option value="10">×10</option>
@@ -262,7 +262,10 @@ export function createPanel(
     });
   }
 
-  btnPlay.addEventListener("click", () => callbacks.onPlayToggle());
+  btnPlay.addEventListener("click", (e) => {
+    e.preventDefault();
+    callbacks.onPlayToggle();
+  });
   selSpeed.addEventListener("change", () =>
     callbacks.onSpeedChange(parseInt(selSpeed.value, 10) as SimSpeed),
   );
@@ -290,11 +293,21 @@ export function createPanel(
 
   renderLayers();
 
+  let lastPlaying: boolean | null = null;
+  let lastExtAuto: boolean | null = null;
+
   return {
     update(state: PanelState) {
-      btnPlay.textContent = state.playing ? "⏸ Pause" : "▶ Lecture";
-      btnExtAuto.textContent = state.extAuto ? "T ext. manuelle" : "T ext. auto";
-      btnExtAuto.classList.toggle("active", state.extAuto);
+      if (state.playing !== lastPlaying) {
+        btnPlay.textContent = state.playing ? "⏸ Pause" : "▶ Lecture";
+        btnPlay.setAttribute("aria-pressed", state.playing ? "true" : "false");
+        lastPlaying = state.playing;
+      }
+      if (state.extAuto !== lastExtAuto) {
+        btnExtAuto.textContent = state.extAuto ? "T ext. manuelle" : "T ext. auto";
+        btnExtAuto.classList.toggle("active", state.extAuto);
+        lastExtAuto = state.extAuto;
+      }
       if (state.extAuto) {
         const h = Math.floor(simTimeToHour(state.simTime));
         const m = Math.floor((simTimeToHour(state.simTime) % 1) * 60);

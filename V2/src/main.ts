@@ -177,14 +177,20 @@ function tempChartForInteraction() {
 
 let lastTempRangeKey = "";
 
+let resizePending = false;
+
 function syncCanvasToRange(range: ReturnType<typeof tempDisplayRange>) {
   const key = `${range.min}:${range.max}`;
   const chartExtra = extAuto ? CHART_HEIGHT : 0;
   const minWall = wallZoneMinHeight(range);
-  if (key !== lastTempRangeKey || canvas.height - chartExtra < minWall) {
-    lastTempRangeKey = key;
+  if (key === lastTempRangeKey && canvas.height - chartExtra >= minWall) return;
+  lastTempRangeKey = key;
+  if (resizePending) return;
+  resizePending = true;
+  requestAnimationFrame(() => {
+    resizePending = false;
     resize();
-  }
+  });
 }
 
 function resize() {
@@ -239,6 +245,19 @@ function draw() {
 recordThermalHistory();
 
 let lastFrame = performance.now();
+/** Temps max (ms) consacré à la physique par image — garde l'UI réactive. */
+const PHYSICS_BUDGET_MS = 16;
+
+function advanceSimulation(dtSimTotal: number) {
+  if (dtSimTotal <= 0) return;
+  const t0 = performance.now();
+  let remaining = dtSimTotal;
+  while (remaining > 0 && performance.now() - t0 < PHYSICS_BUDGET_MS) {
+    const chunk = Math.min(remaining, Math.max(solver.stableDt() * 40, 2));
+    solver.step(chunk, currentTExt(), currentQSolar());
+    remaining -= chunk;
+  }
+}
 
 function frame(now: number) {
   const dtReal = (now - lastFrame) / 1000;
@@ -246,7 +265,7 @@ function frame(now: number) {
 
   if (playing) {
     const dtSim = speed * Math.max(MIN_DT, dtReal);
-    solver.step(dtSim, currentTExt(), currentQSolar());
+    advanceSimulation(dtSim);
     recordThermalHistory();
   }
 
