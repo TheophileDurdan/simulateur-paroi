@@ -10,8 +10,9 @@ import { INITIAL_TEMP } from "../types";
 import type { TempDisplayRange } from "./scheduleEditor";
 
 const WALL_TOP_PAD = 8;
-const TEMP_BAR_COLOR = "rgba(220, 40, 40, 0.5)";
-const GAP_AIR_BAR_COLOR = "rgba(2, 119, 189, 0.42)";
+/** Échelle de couleur fixe des barres thermomètre (°C). */
+const BAR_COLOR_TEMP_MIN = -10;
+const BAR_COLOR_TEMP_MAX = 50;
 const GAP_HATCH = "rgba(100, 180, 230, 0.35)";
 const FILM_SHINE = "rgba(255, 255, 255, 0.45)";
 
@@ -67,6 +68,44 @@ function tempToY(temp: number, layout: WallLayout): number {
   return layout.baselineY - ratio * layout.plotHeight;
 }
 
+function lerpByte(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+/** Bleu froid (-10 °C) → rouge vif (+50 °C). */
+function tempToBarColor(tempC: number): string {
+  const t = Math.max(BAR_COLOR_TEMP_MIN, Math.min(BAR_COLOR_TEMP_MAX, tempC));
+  const u = (t - BAR_COLOR_TEMP_MIN) / (BAR_COLOR_TEMP_MAX - BAR_COLOR_TEMP_MIN);
+  if (u <= 0.35) {
+    const v = u / 0.35;
+    return `rgb(${lerpByte(0, 0, v)}, ${lerpByte(70, 190, v)}, ${lerpByte(255, 255, v)})`;
+  }
+  if (u <= 0.65) {
+    const v = (u - 0.35) / 0.3;
+    return `rgb(${lerpByte(0, 255, v)}, ${lerpByte(190, 220, v)}, ${lerpByte(255, 0, v)})`;
+  }
+  const v = (u - 0.65) / 0.35;
+  return `rgb(${lerpByte(255, 255, v)}, ${lerpByte(220, 30, v)}, ${lerpByte(0, 0, v)})`;
+}
+
+function createBarGradient(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  layout: WallLayout,
+): CanvasGradient {
+  const grad = ctx.createLinearGradient(centerX, layout.baselineY, centerX, layout.wallTop);
+  for (let t = BAR_COLOR_TEMP_MIN; t <= BAR_COLOR_TEMP_MAX; t += 5) {
+    const y = tempToY(t, layout);
+    const stop = (layout.baselineY - y) / layout.plotHeight;
+    grad.addColorStop(Math.max(0, Math.min(1, stop)), tempToBarColor(t));
+  }
+  return grad;
+}
+
+function barLabelColor(tempC: number): string {
+  return tempC > 32 ? "#fff" : "#1a1a1a";
+}
+
 function drawTempBar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -74,17 +113,24 @@ function drawTempBar(
   layout: WallLayout,
   temp: number,
   interactive = false,
-  fillColor = TEMP_BAR_COLOR,
 ) {
-  const top = Math.max(layout.wallTop, tempToY(temp, layout));
+  const fillTop = Math.max(layout.wallTop, tempToY(temp, layout));
+  const h = layout.baselineY - fillTop;
+  if (h <= 0) return;
 
-  ctx.fillStyle = fillColor;
-  ctx.fillRect(x, top, width, layout.baselineY - top);
+  const cx = x + width / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, fillTop, width, h);
+  ctx.clip();
+  ctx.fillStyle = createBarGradient(ctx, cx, layout);
+  ctx.fillRect(x, layout.wallTop, width, layout.plotHeight);
+  ctx.restore();
 
   if (interactive) {
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(x, top, width, layout.baselineY - top);
+    ctx.strokeRect(x, fillTop, width, h);
   }
 }
 
@@ -94,12 +140,11 @@ function drawAirZoneTemp(
   zoneW: number,
   layout: WallLayout,
   temp: number,
-  accent: string,
 ) {
   const barTop = Math.max(layout.wallTop, tempToY(temp, layout));
   const midY = (barTop + layout.baselineY) / 2;
 
-  ctx.fillStyle = accent;
+  ctx.fillStyle = barLabelColor(temp);
   ctx.font = "bold 14px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -130,14 +175,14 @@ function drawGapTempGauge(
   layout: WallLayout,
   temp: number,
 ) {
-  drawTempBar(ctx, x, width, layout, temp, false, GAP_AIR_BAR_COLOR);
+  drawTempBar(ctx, x, width, layout, temp);
 
   if (width < 18) return;
 
   const barTop = Math.max(layout.wallTop, tempToY(temp, layout));
   const midY = (barTop + layout.baselineY) / 2;
 
-  ctx.fillStyle = "#0277bd";
+  ctx.fillStyle = barLabelColor(temp);
   ctx.font = width >= 44 ? "bold 10px system-ui, sans-serif" : "bold 8px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -300,8 +345,8 @@ export function renderWall(
 
   drawExtAirScale(ctx, layout);
 
-  drawAirZoneTemp(ctx, 0, AIR_ZONE_WIDTH, layout, tExt, "#1565c0");
-  drawAirZoneTemp(ctx, width - AIR_ZONE_WIDTH, AIR_ZONE_WIDTH, layout, tAirInt, "#c62828");
+  drawAirZoneTemp(ctx, 0, AIR_ZONE_WIDTH, layout, tExt);
+  drawAirZoneTemp(ctx, width - AIR_ZONE_WIDTH, AIR_ZONE_WIDTH, layout, tAirInt);
 }
 
 export function yToTExt(y: number, layout: WallLayout): number {
