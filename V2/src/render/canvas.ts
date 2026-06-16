@@ -327,6 +327,7 @@ export function isOnExtBar(mx: number, my: number, layout: WallLayout): boolean 
 export {
   buildTempChartContext,
   computeTempDisplayRange,
+  computeChartTempDisplayRange,
   drawTempChartPanel,
   drawSolarChartPanel,
   DEFAULT_SERIES_VISIBILITY,

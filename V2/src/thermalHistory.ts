@@ -57,3 +57,12 @@ export class ThermalHistory {
     this.wallExt = [];
   }
 }
+
+/** Moyenne T air int. + T paroi int. (confort ressenti). */
+export function feltIntSeries(history: ThermalHistoryData): TempSample[] {
+  return history.airInt.map((s, i) => {
+    const wi = history.wallInt[i];
+    const wallT = wi && Math.abs(wi.simTime - s.simTime) < 2 ? wi.temp : s.temp;
+    return { simTime: s.simTime, temp: (s.temp + wallT) / 2 };
+  });
+}

@@ -53,6 +53,7 @@ export interface PanelState {
     airInt: number;
     wallExt: number;
     wallInt: number;
+    feltInt: number;
   };
 }
 
@@ -63,10 +64,11 @@ export interface PanelHandle {
 }
 
 const LEGEND_ITEMS: { id: ChartSeriesId; label: string; color: string }[] = [
-  { id: "schedule", label: "T ext. consigne", color: "#1565c0" },
+  { id: "schedule", label: "T air ext.", color: "#1565c0" },
   { id: "airInt", label: "T air int.", color: "#e65100" },
   { id: "wallExt", label: "T paroi ext.", color: "#c62828" },
   { id: "wallInt", label: "T paroi int.", color: "#2e7d32" },
+  { id: "feltInt", label: "T int. ressenti", color: "#6a1b9a" },
 ];
 
 export function createPanel(
@@ -429,10 +431,12 @@ export function createPanel(
       const airIntEl = roots.tempLegend.querySelector("#legend-val-airInt");
       const wallExtEl = roots.tempLegend.querySelector("#legend-val-wallExt");
       const wallIntEl = roots.tempLegend.querySelector("#legend-val-wallInt");
+      const feltIntEl = roots.tempLegend.querySelector("#legend-val-feltInt");
       scheduleEl!.textContent = formatTemp(temps.schedule);
       airIntEl!.textContent = formatTemp(temps.airInt);
       wallExtEl!.textContent = formatTemp(temps.wallExt);
       wallIntEl!.textContent = formatTemp(temps.wallInt);
+      feltIntEl!.textContent = formatTemp(temps.feltInt);
     },
     setLayers(newLayers) {
       layers = newLayers.map((l) => ({ ...l }));

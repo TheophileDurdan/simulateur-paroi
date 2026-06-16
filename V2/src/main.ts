@@ -14,6 +14,7 @@ import {
   chartMouseUp,
   computeWallLayout,
   computeTempDisplayRange,
+  computeChartTempDisplayRange,
   DEFAULT_SERIES_VISIBILITY,
   drawSolarChartPanel,
   drawTempChartPanel,
@@ -160,7 +161,7 @@ function recordThermalHistory() {
   thermalHistory.record(solver.simTime, solver.tAirInt, wallInt, wallExt);
 }
 
-function tempDisplayRange() {
+function wallTempDisplayRange() {
   const history = thermalHistory.last24h(solver.simTime);
   const tempPts = toHourlyPoints(schedulePoints);
   const interpolate = (pts: HourlyPoint[], h: number) =>
@@ -173,8 +174,30 @@ function tempDisplayRange() {
   );
 }
 
+function chartTempDisplayRange() {
+  const history = thermalHistory.last24h(solver.simTime);
+  const tempPts = toHourlyPoints(schedulePoints);
+  const interpolate = (pts: HourlyPoint[], h: number) =>
+    interpolateHourly(pts, h, INITIAL_TEMP);
+  const wt = solver.wallTemps;
+  const wallInt = wt[wt.length - 1] ?? INITIAL_TEMP;
+  return computeChartTempDisplayRange(
+    tempPts,
+    history,
+    (h) => interpolate(tempPts, h),
+    seriesVisible,
+    {
+      schedule: currentTExt(),
+      airInt: solver.tAirInt,
+      wallExt: wt[0] ?? INITIAL_TEMP,
+      wallInt,
+      feltInt: (solver.tAirInt + wallInt) / 2,
+    },
+  );
+}
+
 function tempChartForInteraction() {
-  const range = tempDisplayRange();
+  const range = chartTempDisplayRange();
   return buildTempChartContext(
     tempChartCanvas.width,
     tempChartCanvas.height,
@@ -209,14 +232,14 @@ function wallLayout() {
     wallCanvas.height,
     solver.mesh,
     extAuto,
-    tempDisplayRange(),
+    wallTempDisplayRange(),
   );
 }
 
 function draw() {
   resize();
 
-  const range = tempDisplayRange();
+  const chartRange = chartTempDisplayRange();
   const history = thermalHistory.last24h(solver.simTime);
 
   renderWall(
@@ -236,7 +259,7 @@ function draw() {
     schedulePoints,
     solver.simTime,
     history,
-    range,
+    chartRange,
     seriesVisible,
     extAuto,
   );
@@ -279,6 +302,7 @@ function frame(now: number) {
   }
 
   const wt = solver.wallTemps;
+  const wallInt = wt[wt.length - 1] ?? INITIAL_TEMP;
   panel.update({
     playing,
     speed,
@@ -288,7 +312,8 @@ function frame(now: number) {
       schedule: currentTExt(),
       airInt: solver.tAirInt,
       wallExt: wt[0] ?? INITIAL_TEMP,
-      wallInt: wt[wt.length - 1] ?? INITIAL_TEMP,
+      wallInt,
+      feltInt: (solver.tAirInt + wallInt) / 2,
     },
   });
 

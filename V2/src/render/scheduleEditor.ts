@@ -1,6 +1,7 @@
 import type { FacadeOrientation, SolarSite } from "../facadeGeometry";
 import { solarPercentAt } from "../facadeGeometry";
 import type { TempSample, ThermalHistoryData } from "../thermalHistory";
+import { feltIntSeries } from "../thermalHistory";
 import {
   HOURS_PER_DAY,
   interpolateHourly,
@@ -64,6 +65,7 @@ export interface ChartSeriesVisibility {
   airInt: boolean;
   wallExt: boolean;
   wallInt: boolean;
+  feltInt: boolean;
 }
 
 export const DEFAULT_SERIES_VISIBILITY: ChartSeriesVisibility = {
@@ -71,7 +73,43 @@ export const DEFAULT_SERIES_VISIBILITY: ChartSeriesVisibility = {
   airInt: true,
   wallExt: true,
   wallInt: true,
+  feltInt: true,
 };
+
+export interface ChartCurrentTemps {
+  schedule?: number;
+  airInt?: number;
+  wallExt?: number;
+  wallInt?: number;
+  feltInt?: number;
+}
+
+/** Échelle du graphique températures — uniquement les séries visibles. */
+export function computeChartTempDisplayRange(
+  scheduleHourly: HourlyPoint[],
+  history: ThermalHistoryData,
+  sampleCurve: (hour: number) => number,
+  visibility: ChartSeriesVisibility,
+  current: ChartCurrentTemps = {},
+): TempDisplayRange {
+  const histories: TempSample[][] = [];
+  if (visibility.airInt) histories.push(history.airInt);
+  if (visibility.wallExt) histories.push(history.wallExt);
+  if (visibility.wallInt) histories.push(history.wallInt);
+  if (visibility.feltInt) histories.push(feltIntSeries(history));
+
+  const schedPts = visibility.schedule ? scheduleHourly : [];
+  const curve = visibility.schedule ? sampleCurve : () => NaN;
+
+  const extra: number[] = [];
+  if (visibility.schedule && current.schedule != null) extra.push(current.schedule);
+  if (visibility.airInt && current.airInt != null) extra.push(current.airInt);
+  if (visibility.wallExt && current.wallExt != null) extra.push(current.wallExt);
+  if (visibility.wallInt && current.wallInt != null) extra.push(current.wallInt);
+  if (visibility.feltInt && current.feltInt != null) extra.push(current.feltInt);
+
+  return computeTempDisplayRange(schedPts, histories, curve, extra);
+}
 
 export interface TempChartContext {
   layout: ReturnType<typeof flexibleGraphLayout>;
@@ -197,7 +235,7 @@ export function drawTempChartPanel(
       grid: "#b0c4de",
       line: "#1565c0",
       pointStroke: "#1565c0",
-      label: "— T ext. consigne",
+      label: "— T air ext.",
       labelColor: visibility.schedule ? "#1565c0" : "#9e9e9e",
       unit: "°C",
       valueStep,
@@ -216,6 +254,9 @@ export function drawTempChartPanel(
   }
   if (visibility.wallInt) {
     drawHistoryTrace(ctx, tempG, history.wallInt, simTimeSec, "#2e7d32");
+  }
+  if (visibility.feltInt) {
+    drawHistoryTrace(ctx, tempG, feltIntSeries(history), simTimeSec, "#6a1b9a");
   }
 }
 
