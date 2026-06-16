@@ -102,22 +102,52 @@ function drawAirZoneTemp(
   ctx.fillText(`${temp.toFixed(1)} °C`, zoneX + zoneW / 2, midY);
 }
 
-function drawScale(ctx: CanvasRenderingContext2D, layout: WallLayout) {
-  const x = layout.wallX + 4;
-  ctx.fillStyle = "#555";
-  ctx.font = "10px system-ui, sans-serif";
-  ctx.textAlign = "left";
+function drawHorizontalGrid(ctx: CanvasRenderingContext2D, layout: WallLayout) {
+  const { wallTop, baselineY, width, tempMin, tempMax } = layout;
+  const tStart = Math.ceil(tempMin);
+  const tEnd = Math.floor(tempMax);
 
-  const span = layout.tempMax - layout.tempMin || 1;
-  for (let t = layout.tempMin; t <= layout.tempMax + 0.001; t += layout.valueStep) {
-    const ratio = (t - layout.tempMin) / span;
-    const y = layout.baselineY - ratio * layout.plotHeight;
-    ctx.strokeStyle = "#ccc";
+  for (let t = tStart; t <= tEnd; t++) {
+    const y = tempToY(t, layout);
+    if (y < wallTop - 0.5 || y > baselineY + 0.5) continue;
+
+    const isMajor = t % 10 === 0;
+    ctx.strokeStyle = isMajor ? "rgba(0, 0, 0, 0.16)" : "rgba(0, 0, 0, 0.05)";
+    ctx.lineWidth = isMajor ? 1 : 0.5;
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 6, y);
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(width, y + 0.5);
     ctx.stroke();
-    ctx.fillText(`${Math.round(t)}°`, x + 8, y + 3);
+  }
+}
+
+/** Graduations dans la zone air ext., le long du bord paroi. */
+function drawExtAirScale(ctx: CanvasRenderingContext2D, layout: WallLayout) {
+  const { wallTop, baselineY, wallX, tempMin, tempMax } = layout;
+  const tStart = Math.ceil(tempMin);
+  const tEnd = Math.floor(tempMax);
+
+  for (let t = tStart; t <= tEnd; t++) {
+    const y = tempToY(t, layout);
+    if (y < wallTop - 0.5 || y > baselineY + 0.5) continue;
+
+    const isMajor = t % 10 === 0;
+    const tickLen = isMajor ? 10 : 5;
+
+    ctx.strokeStyle = isMajor ? "#78909c" : "#b0bec5";
+    ctx.lineWidth = isMajor ? 1.25 : 0.75;
+    ctx.beginPath();
+    ctx.moveTo(wallX - tickLen, y + 0.5);
+    ctx.lineTo(wallX, y + 0.5);
+    ctx.stroke();
+
+    if (isMajor) {
+      ctx.fillStyle = "#455a64";
+      ctx.font = isMajor ? "10px system-ui, sans-serif" : "9px system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${t}°`, wallX - tickLen - 4, y);
+    }
   }
 }
 
@@ -190,6 +220,8 @@ export function renderWall(
   ctx.fillStyle = "#fce8e8";
   ctx.fillRect(width - AIR_ZONE_WIDTH, wallTop, AIR_ZONE_WIDTH, height - wallTop);
 
+  drawHorizontalGrid(ctx, layout);
+
   ctx.fillStyle = "rgba(0,0,0,0.04)";
   ctx.fillRect(0, baselineY, width, height - baselineY);
 
@@ -214,7 +246,7 @@ export function renderWall(
     }
   }
 
-  drawScale(ctx, layout);
+  drawExtAirScale(ctx, layout);
 
   drawAirZoneTemp(ctx, 0, AIR_ZONE_WIDTH, layout, tExt, "#1565c0");
   drawAirZoneTemp(ctx, width - AIR_ZONE_WIDTH, AIR_ZONE_WIDTH, layout, tAirInt, "#c62828");
