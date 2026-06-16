@@ -305,8 +305,12 @@ body {
   border-top: 1px solid #e8e8e8;
 }
 
-.facade-ventilation-field input {
-  width: 4.5rem;
+.facade-ventilation-field input[type="range"] {
+  width: 100%;
+  padding: 0;
+  margin: 2px 0;
+  cursor: pointer;
+  accent-color: #1565c0;
 }
 
 .ventilation-field {

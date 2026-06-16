@@ -178,9 +178,10 @@ export function createFacadeWidget3D(
             <span>Orient. <strong id="facade-3d-az">Sud</strong></span>
           </div>
           <span class="facade-3d-hint">Glisser ↔ orientation · ↕ inclinaison</span>
-          <label class="facade-site-field facade-ventilation-field">Renouvellement air int.
-            <input id="site-ventilation" type="number" min="0" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
-            <span class="facade-site-unit">vol/h · 0 = aucun · 1 = 100 % du volume / h</span>
+          <label class="facade-site-field facade-ventilation-field facade-heating-field">Renouvellement air int.
+            <input id="site-ventilation" type="range" min="0" max="4" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
+            <span id="site-ventilation-val" class="facade-site-meta">${DEFAULT_VENTILATION_ACH.toFixed(1)} vol/h</span>
+            <span class="facade-site-unit">0 = aucun · 1 = 100 % du volume / h</span>
           </label>
         </div>
         <div class="facade-3d-site">
@@ -222,6 +223,7 @@ export function createFacadeWidget3D(
   const heatingValEl = container.querySelector<HTMLSpanElement>("#site-heating-val")!;
   const declEl = container.querySelector<HTMLSpanElement>("#site-decl")!;
   const ventilationInput = container.querySelector<HTMLInputElement>("#site-ventilation")!;
+  const ventilationValEl = container.querySelector<HTMLSpanElement>("#site-ventilation-val")!;
 
   function updateHeatingReadout() {
     const w = parseInt(heatingInput.value, 10) || 0;
@@ -240,11 +242,21 @@ export function createFacadeWidget3D(
   updateHeatingReadout();
   heatingInput.addEventListener("input", emitHeating);
 
+  function updateVentilationReadout(): number {
+    const raw = parseFloat(ventilationInput.value);
+    const v = Math.min(4, Math.max(0, Number.isFinite(raw) ? raw : 0));
+    ventilationInput.value = v.toFixed(1);
+    ventilationValEl.textContent = `${v.toFixed(1)} vol/h`;
+    return v;
+  }
+
   function emitVentilation() {
-    const v = Math.max(0, parseFloat(ventilationInput.value) || 0);
+    const v = updateVentilationReadout();
     callbacks.onVentilationChange(v);
   }
 
+  updateVentilationReadout();
+  ventilationInput.addEventListener("input", emitVentilation);
   ventilationInput.addEventListener("change", emitVentilation);
 
   let tilt = initial.tiltFromHorizontal;
