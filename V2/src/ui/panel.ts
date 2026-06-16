@@ -12,6 +12,17 @@ import type { SchedulePoint } from "../schedule";
 import { DEFAULT_SOLAR_SITE, type SolarSite } from "../facadeGeometry";
 import { defaultWallPreset } from "../presets/wallPresets";
 import { createFacadeWidget3D, type FacadeWidgetHandle } from "./facadeWidget3d";
+import type { ChartSeriesVisibility } from "../render/canvas";
+
+export type ChartSeriesId = keyof ChartSeriesVisibility;
+
+export interface PanelRoots {
+  banner: HTMLElement;
+  layersZone: HTMLElement;
+  facadeHost: HTMLElement;
+  tempHeader: HTMLElement;
+  tempLegend: HTMLElement;
+}
 
 export interface PanelCallbacks {
   onLayersChange: (layers: Layer[]) => void;
@@ -28,6 +39,7 @@ export interface PanelCallbacks {
   onWallPresetApply: (preset: WallPreset) => void;
   onVentilationChange: (achPerHour: number) => void;
   onInteriorHeatingChange: (powerWm2: number) => void;
+  onSeriesVisibilityChange: (series: ChartSeriesId, visible: boolean) => void;
 }
 
 export interface PanelState {
@@ -35,6 +47,12 @@ export interface PanelState {
   speed: SimSpeed;
   simTime: number;
   extAuto: boolean;
+  temps: {
+    schedule: number;
+    airInt: number;
+    wallExt: number;
+    wallInt: number;
+  };
 }
 
 export interface PanelHandle {
@@ -43,14 +61,21 @@ export interface PanelHandle {
   setActiveWallPreset: (id: WallPresetId | null) => void;
 }
 
+const LEGEND_ITEMS: { id: ChartSeriesId; label: string; color: string }[] = [
+  { id: "schedule", label: "T ext. consigne", color: "#1565c0" },
+  { id: "airInt", label: "T air int.", color: "#e65100" },
+  { id: "wallExt", label: "T paroi ext.", color: "#c62828" },
+  { id: "wallInt", label: "T paroi int.", color: "#2e7d32" },
+];
+
 export function createPanel(
-  container: HTMLElement,
+  roots: PanelRoots,
   initialLayers: Layer[],
   callbacks: PanelCallbacks,
 ): PanelHandle {
-  container.innerHTML = `
-    <div class="panel-row panel-title">
-      <h1>Paroi multicouche V2 — convection &amp; rayonnement</h1>
+  roots.banner.innerHTML = `
+    <div class="banner-row banner-title">
+      <h1>Simulateur paroi</h1>
       <div class="sim-controls">
         <button id="btn-play" type="button" aria-pressed="false">▶ Lecture</button>
         <label>Vitesse
@@ -60,9 +85,7 @@ export function createPanel(
             <option value="1000">×1000</option>
           </select>
         </label>
-        <span id="sim-time">t = 0 s</span>
         <button id="btn-ext-auto" type="button" class="active">T ext. manuelle</button>
-        <span id="read-ext-mode" class="ext-mode-hint"></span>
         <button id="btn-reset" type="button">Réinit. T</button>
         <label class="ventilation-field" title="Renouvellement d'air entre intérieur et extérieur">Ventilation
           <input type="number" id="inp-ventilation" min="0" max="20" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
@@ -70,47 +93,75 @@ export function createPanel(
         </label>
       </div>
     </div>
-    <div class="panel-row panel-wall-presets">
+    <div class="banner-row banner-wall-presets">
       <span class="wall-presets-label">Paroi type :</span>
       <div id="wall-preset-buttons" class="wall-preset-buttons"></div>
     </div>
-    <div id="facade-controls-host" class="panel-row"></div>
-    <div class="panel-row layers-header">
+  `;
+
+  roots.layersZone.innerHTML = `
+    <div class="layers-header">
       <span>Couches (ext. → int.)</span>
       <button id="btn-add" type="button">+ Ajouter une couche</button>
     </div>
     <div id="layers-list" class="layers-list"></div>
   `;
 
-  const btnPlay = container.querySelector<HTMLButtonElement>("#btn-play")!;
-  const selSpeed = container.querySelector<HTMLSelectElement>("#sel-speed")!;
-  const btnReset = container.querySelector<HTMLButtonElement>("#btn-reset")!;
-  const btnExtAuto = container.querySelector<HTMLButtonElement>("#btn-ext-auto")!;
-  const btnAdd = container.querySelector<HTMLButtonElement>("#btn-add")!;
-  const layersList = container.querySelector<HTMLDivElement>("#layers-list")!;
-  const readExtMode = container.querySelector<HTMLSpanElement>("#read-ext-mode")!;
-  const simTimeEl = container.querySelector<HTMLSpanElement>("#sim-time")!;
-  const facadeHost = container.querySelector<HTMLDivElement>("#facade-controls-host")!;
-  const presetButtonsHost = container.querySelector<HTMLDivElement>("#wall-preset-buttons")!;
-  const inpVentilation = container.querySelector<HTMLInputElement>("#inp-ventilation")!;
+  roots.tempHeader.innerHTML = `
+    <span id="sim-time" class="sim-time">t = 0 s</span>
+    <span id="read-ext-mode" class="ext-mode-hint"></span>
+  `;
+
+  roots.tempLegend.innerHTML = `
+    <div class="chart-legend">
+      ${LEGEND_ITEMS.map(
+        (item) => `
+        <label class="legend-item" data-series="${item.id}">
+          <input type="checkbox" class="legend-check" data-series="${item.id}" checked />
+          <span class="legend-swatch" style="background:${item.color}"></span>
+          <span class="legend-label">${item.label}</span>
+          <span class="legend-value" id="legend-val-${item.id}">—</span>
+        </label>`,
+      ).join("")}
+    </div>
+  `;
+
+  const btnPlay = roots.banner.querySelector<HTMLButtonElement>("#btn-play")!;
+  const selSpeed = roots.banner.querySelector<HTMLSelectElement>("#sel-speed")!;
+  const btnReset = roots.banner.querySelector<HTMLButtonElement>("#btn-reset")!;
+  const btnExtAuto = roots.banner.querySelector<HTMLButtonElement>("#btn-ext-auto")!;
+  const btnAdd = roots.layersZone.querySelector<HTMLButtonElement>("#btn-add")!;
+  const layersList = roots.layersZone.querySelector<HTMLDivElement>("#layers-list")!;
+  const readExtMode = roots.tempHeader.querySelector<HTMLSpanElement>("#read-ext-mode")!;
+  const simTimeEl = roots.tempHeader.querySelector<HTMLSpanElement>("#sim-time")!;
+  const presetButtonsHost = roots.banner.querySelector<HTMLDivElement>("#wall-preset-buttons")!;
+  const inpVentilation = roots.banner.querySelector<HTMLInputElement>("#inp-ventilation")!;
+
+  roots.tempLegend.querySelectorAll<HTMLInputElement>(".legend-check").forEach((input) => {
+    input.addEventListener("change", () => {
+      const series = input.dataset.series as ChartSeriesId;
+      callbacks.onSeriesVisibilityChange(series, input.checked);
+    });
+  });
 
   let facadeWidget: FacadeWidgetHandle;
 
   facadeWidget = createFacadeWidget3D(
-    facadeHost,
+    roots.facadeHost,
     defaultWallPreset().facade,
     DEFAULT_SOLAR_SITE,
     {
-    onFacadeChange(f, site) {
-      callbacks.onFacadeChange(f.tiltFromHorizontal, f.azimuthFacing, site);
+      onFacadeChange(f, site) {
+        callbacks.onFacadeChange(f.tiltFromHorizontal, f.azimuthFacing, site);
+      },
+      onClimatePresetApply(site, schedule, initialTemp) {
+        callbacks.onClimatePresetApply(site, schedule, initialTemp);
+      },
+      onInteriorHeatingChange(powerWm2) {
+        callbacks.onInteriorHeatingChange(powerWm2);
+      },
     },
-    onClimatePresetApply(site, schedule, initialTemp) {
-      callbacks.onClimatePresetApply(site, schedule, initialTemp);
-    },
-    onInteriorHeatingChange(powerWm2) {
-      callbacks.onInteriorHeatingChange(powerWm2);
-    },
-  });
+  );
 
   let layers: Layer[] = [...initialLayers];
   let activeWallPresetId: WallPresetId | null = "wall-concrete-south";
@@ -296,6 +347,10 @@ export function createPanel(
   let lastPlaying: boolean | null = null;
   let lastExtAuto: boolean | null = null;
 
+  function formatTemp(v: number): string {
+    return `${v.toFixed(1)} °C`;
+  }
+
   return {
     update(state: PanelState) {
       if (state.playing !== lastPlaying) {
@@ -322,6 +377,16 @@ export function createPanel(
           : s < 86400
             ? `t = ${(s / 3600).toFixed(2)} h`
             : `t = ${(s / 86400).toFixed(2)} j`;
+
+      const temps = state.temps;
+      const scheduleEl = roots.tempLegend.querySelector("#legend-val-schedule");
+      const airIntEl = roots.tempLegend.querySelector("#legend-val-airInt");
+      const wallExtEl = roots.tempLegend.querySelector("#legend-val-wallExt");
+      const wallIntEl = roots.tempLegend.querySelector("#legend-val-wallInt");
+      scheduleEl!.textContent = formatTemp(temps.schedule);
+      airIntEl!.textContent = formatTemp(temps.airInt);
+      wallExtEl!.textContent = formatTemp(temps.wallExt);
+      wallIntEl!.textContent = formatTemp(temps.wallInt);
     },
     setLayers(newLayers) {
       layers = newLayers.map((l) => ({ ...l }));

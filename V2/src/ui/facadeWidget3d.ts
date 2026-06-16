@@ -29,7 +29,7 @@ import {
 import type { SchedulePoint } from "../schedule";
 
 const SNAP_DEG = 5;
-const WIDGET_SIZE = 220;
+const WIDGET_SIZE = 150;
 const SIM_THROTTLE_MS = 100;
 const CAMERA_Z_OFFSET = 0.45;
 

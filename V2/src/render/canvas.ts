@@ -2,26 +2,22 @@ import {
   AIR_BAR_WIDTH,
   AIR_ZONE_WIDTH,
   MARGIN_BOTTOM,
-  PX_PER_DEG,
 } from "../types";
-import type { FacadeOrientation, SolarSite } from "../facadeGeometry";
-import type { ThermalHistoryData } from "../thermalHistory";
-import type { SchedulePoint } from "../schedule";
-import { CHART_HEIGHT, drawChartsPanel, type TempDisplayRange } from "./scheduleEditor";
 import type { ThermalMesh } from "../thermal/solver";
 import { visualWeights } from "../thermal/solver";
+import type { TempDisplayRange } from "./scheduleEditor";
 
+const WALL_TOP_PAD = 8;
 const TEMP_BAR_COLOR = "rgba(220, 40, 40, 0.5)";
 const GAP_HATCH = "rgba(100, 180, 230, 0.35)";
 const FILM_SHINE = "rgba(255, 255, 255, 0.45)";
 
-export interface Layout {
+export interface WallLayout {
   width: number;
   height: number;
   wallTop: number;
   wallX: number;
   wallW: number;
-  /** Largeurs des colonnes visuelles (nœuds solides + cavités). */
   colWidths: number[];
   baselineY: number;
   plotHeight: number;
@@ -31,19 +27,16 @@ export interface Layout {
   extAuto: boolean;
 }
 
-export function computeLayout(
+export function computeWallLayout(
   canvasWidth: number,
   canvasHeight: number,
   mesh: ThermalMesh,
   extAuto: boolean,
   tempRange: TempDisplayRange,
-): Layout {
-  const chartH = extAuto ? CHART_HEIGHT : 0;
-  const rangeSpan = tempRange.max - tempRange.min;
-  const minWallH = rangeSpan * PX_PER_DEG + MARGIN_BOTTOM;
-  const wallZoneH = Math.max(minWallH, canvasHeight - chartH);
-  const height = chartH + wallZoneH;
-  const wallTop = chartH;
+): WallLayout {
+  const wallTop = WALL_TOP_PAD;
+  const baselineY = canvasHeight - MARGIN_BOTTOM;
+  const plotHeight = Math.max(1, baselineY - wallTop);
   const wallW = Math.max(1, canvasWidth - 2 * AIR_ZONE_WIDTH);
   const weights = visualWeights(mesh);
   const total = weights.reduce((a, b) => a + b, 0) || 1;
@@ -51,13 +44,13 @@ export function computeLayout(
 
   return {
     width: canvasWidth,
-    height,
+    height: canvasHeight,
     wallTop,
     wallX: AIR_ZONE_WIDTH,
     wallW,
     colWidths,
-    baselineY: height - MARGIN_BOTTOM,
-    plotHeight: wallZoneH - MARGIN_BOTTOM,
+    baselineY,
+    plotHeight,
     tempMin: tempRange.min,
     tempMax: tempRange.max,
     valueStep: tempRange.step,
@@ -65,7 +58,7 @@ export function computeLayout(
   };
 }
 
-function tempToY(temp: number, layout: Layout): number {
+function tempToY(temp: number, layout: WallLayout): number {
   const span = layout.tempMax - layout.tempMin || 1;
   const ratio = Math.max(0, Math.min(1, (temp - layout.tempMin) / span));
   return layout.baselineY - ratio * layout.plotHeight;
@@ -75,7 +68,7 @@ function drawTempBar(
   ctx: CanvasRenderingContext2D,
   x: number,
   width: number,
-  layout: Layout,
+  layout: WallLayout,
   temp: number,
   interactive = false,
 ) {
@@ -95,7 +88,7 @@ function drawAirZoneTemp(
   ctx: CanvasRenderingContext2D,
   zoneX: number,
   zoneW: number,
-  layout: Layout,
+  layout: WallLayout,
   temp: number,
   accent: string,
 ) {
@@ -109,7 +102,7 @@ function drawAirZoneTemp(
   ctx.fillText(`${temp.toFixed(1)} °C`, zoneX + zoneW / 2, midY);
 }
 
-function drawScale(ctx: CanvasRenderingContext2D, layout: Layout) {
+function drawScale(ctx: CanvasRenderingContext2D, layout: WallLayout) {
   const x = layout.wallX + 4;
   ctx.fillStyle = "#555";
   ctx.font = "10px system-ui, sans-serif";
@@ -128,41 +121,16 @@ function drawScale(ctx: CanvasRenderingContext2D, layout: Layout) {
   }
 }
 
-export function renderSimulation(
+export function renderWall(
   ctx: CanvasRenderingContext2D,
-  layout: Layout,
+  layout: WallLayout,
   mesh: ThermalMesh,
   wallTemps: number[],
   tAirInt: number,
   tExt: number,
-  extAuto: boolean,
-  schedulePoints: SchedulePoint[],
-  facade: FacadeOrientation,
-  site: SolarSite,
-  simTimeSec: number,
-  history: ThermalHistoryData,
-  facadeSummary: string,
 ) {
   const { width, height, wallTop, wallX, baselineY } = layout;
   ctx.clearRect(0, 0, width, height);
-
-  if (extAuto) {
-    drawChartsPanel(
-      ctx,
-      width,
-      schedulePoints,
-      facade,
-      site,
-      simTimeSec,
-      history,
-      facadeSummary,
-      {
-        min: layout.tempMin,
-        max: layout.tempMax,
-        step: layout.valueStep,
-      },
-    );
-  }
 
   ctx.fillStyle = "#e8f4fc";
   ctx.fillRect(0, wallTop, AIR_ZONE_WIDTH, height - wallTop);
@@ -214,7 +182,7 @@ export function renderSimulation(
   ctx.fillRect(0, baselineY, width, height - baselineY);
 
   const extBarX = (AIR_ZONE_WIDTH - AIR_BAR_WIDTH) / 2;
-  drawTempBar(ctx, extBarX, AIR_BAR_WIDTH, layout, tExt, !extAuto);
+  drawTempBar(ctx, extBarX, AIR_BAR_WIDTH, layout, tExt, !layout.extAuto);
 
   const intBarX = width - AIR_ZONE_WIDTH + (AIR_ZONE_WIDTH - AIR_BAR_WIDTH) / 2;
   drawTempBar(ctx, intBarX, AIR_BAR_WIDTH, layout, tAirInt);
@@ -240,7 +208,7 @@ export function renderSimulation(
   drawAirZoneTemp(ctx, width - AIR_ZONE_WIDTH, AIR_ZONE_WIDTH, layout, tAirInt, "#c62828");
 }
 
-export function yToTExt(y: number, layout: Layout): number {
+export function yToTExt(y: number, layout: WallLayout): number {
   const ratio = 1 - (y - layout.wallTop) / layout.plotHeight;
   const span = layout.tempMax - layout.tempMin;
   return Math.min(
@@ -249,11 +217,7 @@ export function yToTExt(y: number, layout: Layout): number {
   );
 }
 
-export function wallZoneMinHeight(tempRange: TempDisplayRange): number {
-  return (tempRange.max - tempRange.min) * PX_PER_DEG + MARGIN_BOTTOM;
-}
-
-export function isOnExtBar(mx: number, my: number, layout: Layout): boolean {
+export function isOnExtBar(mx: number, my: number, layout: WallLayout): boolean {
   if (layout.extAuto) return false;
   const extBarX = (AIR_ZONE_WIDTH - AIR_BAR_WIDTH) / 2;
   return (
@@ -265,19 +229,15 @@ export function isOnExtBar(mx: number, my: number, layout: Layout): boolean {
 }
 
 export {
-  CHART_HEIGHT,
   buildTempChartContext,
   computeTempDisplayRange,
+  drawTempChartPanel,
+  drawSolarChartPanel,
+  DEFAULT_SERIES_VISIBILITY,
   chartMouseDown,
   chartMouseMove,
   chartMouseUp,
-  chartTargetAt,
-  isInChartArea,
-  isInSolarChartArea,
-  isInTempChartArea,
-  scheduleGraphLayout,
-  solarGraphLayout,
-  tempGraphLayout,
-  type ChartTarget,
+  type ChartSeriesVisibility,
   type ScheduleDragState,
+  type TempDisplayRange,
 } from "./scheduleEditor";

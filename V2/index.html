@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Simulation thermique — paroi multicouche</title>
+    <title>Simulateur paroi</title>
     <meta
       name="description"
       content="Simulateur interactif de transfert thermique à travers une paroi : conduction, convection, rayonnement, canicule, presets bâtiment."
     />
-    <meta property="og:title" content="Simulation thermique — paroi multicouche" />
+    <meta property="og:title" content="Simulateur paroi" />
     <meta
       property="og:description"
       content="Jouez avec les couches, l'orientation, la ventilation et les profils climat en temps réel."
@@ -19,10 +19,30 @@
   </head>
   <body>
     <div id="app">
-      <header id="panel"></header>
-      <main>
-        <canvas id="sim-canvas"></canvas>
-      </main>
+      <header id="banner"></header>
+      <div id="workspace">
+        <aside id="left-column">
+          <section id="zone-site" class="zone zone-site">
+            <div class="zone-site-row">
+              <div id="facade-host"></div>
+              <div class="solar-chart-panel">
+                <canvas id="solar-chart-canvas"></canvas>
+              </div>
+            </div>
+          </section>
+          <section id="zone-layers" class="zone zone-layers"></section>
+          <section id="zone-temp" class="zone zone-temp">
+            <div id="temp-zone-header"></div>
+            <div class="temp-chart-panel">
+              <canvas id="temp-chart-canvas"></canvas>
+            </div>
+            <div id="temp-legend"></div>
+          </section>
+        </aside>
+        <main id="right-column">
+          <canvas id="wall-canvas"></canvas>
+        </main>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

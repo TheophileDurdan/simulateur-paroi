@@ -10,12 +10,9 @@ import {
 } from "../schedule";
 import { INITIAL_TEMP } from "../types";
 import {
-  CHART_HEIGHT,
-  TEMP_CHART_HEIGHT,
-  type ChartGraphLayout,
-  drawHourlyChart,
+  flexibleGraphLayout,
   solarGraphLayout,
-  tempGraphLayout,
+  drawHourlyChart,
   valueToY,
 } from "./chartEditor";
 
@@ -62,8 +59,22 @@ export function computeTempDisplayRange(
 
 export type TempDisplayRange = ReturnType<typeof computeTempDisplayRange>;
 
+export interface ChartSeriesVisibility {
+  schedule: boolean;
+  airInt: boolean;
+  wallExt: boolean;
+  wallInt: boolean;
+}
+
+export const DEFAULT_SERIES_VISIBILITY: ChartSeriesVisibility = {
+  schedule: true,
+  airInt: true,
+  wallExt: true,
+  wallInt: true,
+};
+
 export interface TempChartContext {
-  layout: ChartGraphLayout;
+  layout: ReturnType<typeof flexibleGraphLayout>;
   tempPts: HourlyPoint[];
   valueStep: number;
   interpolate: (pts: HourlyPoint[], hour: number) => number;
@@ -71,6 +82,7 @@ export interface TempChartContext {
 
 export function buildTempChartContext(
   canvasWidth: number,
+  canvasHeight: number,
   schedulePoints: SchedulePoint[],
   history: ThermalHistoryData,
   tempRange?: TempDisplayRange,
@@ -88,7 +100,7 @@ export function buildTempChartContext(
       extraTemps,
     );
   return {
-    layout: tempGraphLayout(canvasWidth, range.min, range.max),
+    layout: flexibleGraphLayout(canvasWidth, canvasHeight, range.min, range.max),
     tempPts,
     valueStep: range.step,
     interpolate,
@@ -97,7 +109,7 @@ export function buildTempChartContext(
 
 function drawHistoryTrace(
   ctx: CanvasRenderingContext2D,
-  g: ChartGraphLayout,
+  g: ReturnType<typeof flexibleGraphLayout>,
   history: TempSample[],
   simTimeSec: number,
   color: string,
@@ -151,42 +163,32 @@ function drawHistoryTrace(
   ctx.stroke();
 }
 
-function drawLegendLine(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  text: string,
-  color: string,
-) {
-  ctx.fillStyle = color;
-  ctx.font = "10px system-ui, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText(text, x, y);
-}
-
-export function drawChartsPanel(
+export function drawTempChartPanel(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
+  canvasHeight: number,
   schedulePoints: SchedulePoint[],
-  facade: FacadeOrientation,
-  site: SolarSite,
   simTimeSec: number,
   history: ThermalHistoryData,
-  facadeSummary: string,
   tempRange: TempDisplayRange,
+  visibility: ChartSeriesVisibility,
+  extAuto: boolean,
 ) {
   const { layout: tempG, tempPts, valueStep, interpolate } = buildTempChartContext(
     canvasWidth,
+    canvasHeight,
     schedulePoints,
     history,
     tempRange,
   );
 
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
   drawHourlyChart(
     ctx,
     canvasWidth,
     0,
-    tempG.bottom,
+    canvasHeight,
     tempG,
     tempPts,
     simTimeSec,
@@ -196,30 +198,45 @@ export function drawChartsPanel(
       line: "#1565c0",
       pointStroke: "#1565c0",
       label: "— T ext. consigne",
-      labelColor: "#1565c0",
+      labelColor: visibility.schedule ? "#1565c0" : "#9e9e9e",
       unit: "°C",
       valueStep,
     },
     interpolate,
     true,
-    true,
+    extAuto && visibility.schedule,
+    visibility.schedule,
   );
 
-  drawLegendLine(ctx, tempG.x + 118, 12, "— T air int.", "#e65100");
-  drawLegendLine(ctx, tempG.x + 218, 12, "— T paroi ext.", "#c62828");
-  drawLegendLine(ctx, tempG.x + 328, 12, "— T paroi int.", "#2e7d32");
+  if (visibility.airInt) {
+    drawHistoryTrace(ctx, tempG, history.airInt, simTimeSec, "#e65100");
+  }
+  if (visibility.wallExt) {
+    drawHistoryTrace(ctx, tempG, history.wallExt, simTimeSec, "#c62828");
+  }
+  if (visibility.wallInt) {
+    drawHistoryTrace(ctx, tempG, history.wallInt, simTimeSec, "#2e7d32");
+  }
+}
 
-  drawHistoryTrace(ctx, tempG, history.airInt, simTimeSec, "#e65100");
-  drawHistoryTrace(ctx, tempG, history.wallExt, simTimeSec, "#c62828");
-  drawHistoryTrace(ctx, tempG, history.wallInt, simTimeSec, "#2e7d32");
+export function drawSolarChartPanel(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  canvasHeight: number,
+  facade: FacadeOrientation,
+  site: SolarSite,
+  simTimeSec: number,
+  facadeSummary: string,
+) {
+  const solarG = solarGraphLayout(canvasWidth, canvasHeight);
 
-  const solarG = solarGraphLayout(canvasWidth);
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
   drawHourlyChart(
     ctx,
     canvasWidth,
-    TEMP_CHART_HEIGHT,
-    solarG.bottom - TEMP_CHART_HEIGHT,
+    0,
+    canvasHeight,
     solarG,
     [],
     simTimeSec,
@@ -237,13 +254,6 @@ export function drawChartsPanel(
     false,
     false,
   );
-
-  ctx.strokeStyle = "#ccc";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, CHART_HEIGHT);
-  ctx.lineTo(canvasWidth, CHART_HEIGHT);
-  ctx.stroke();
 }
 
 export {

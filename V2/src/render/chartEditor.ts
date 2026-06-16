@@ -5,6 +5,14 @@ export const TEMP_CHART_HEIGHT = 260;
 export const SOLAR_CHART_HEIGHT = 130;
 export const CHART_HEIGHT = TEMP_CHART_HEIGHT + SOLAR_CHART_HEIGHT;
 
+/** Bornes d'édition du profil T ext. horaire (°C). */
+export const SCHEDULE_VALUE_MIN = -50;
+export const SCHEDULE_VALUE_MAX = 100;
+
+export function clampScheduleValue(value: number): number {
+  return Math.min(SCHEDULE_VALUE_MAX, Math.max(SCHEDULE_VALUE_MIN, value));
+}
+
 const SCALE_WIDTH = 36;
 const GRAPH_PAD_RIGHT = 10;
 const GRAPH_TOP = 18;
@@ -63,8 +71,18 @@ export function tempGraphLayout(
   canvasWidth: number,
   valueMin = 0,
   valueMax = 50,
+  canvasHeight = TEMP_CHART_HEIGHT,
 ): ChartGraphLayout {
-  return graphLayout(canvasWidth, 0, TEMP_CHART_HEIGHT, valueMin, valueMax);
+  return graphLayout(canvasWidth, 0, canvasHeight, valueMin, valueMax);
+}
+
+export function flexibleGraphLayout(
+  canvasWidth: number,
+  canvasHeight: number,
+  valueMin: number,
+  valueMax: number,
+): ChartGraphLayout {
+  return graphLayout(canvasWidth, 0, canvasHeight, valueMin, valueMax);
 }
 
 export function valueToY(value: number, g: ChartGraphLayout): number {
@@ -74,8 +92,11 @@ export function valueToY(value: number, g: ChartGraphLayout): number {
   return g.y + g.height * (1 - ratio);
 }
 
-export function solarGraphLayout(canvasWidth: number): ChartGraphLayout {
-  return graphLayout(canvasWidth, TEMP_CHART_HEIGHT, SOLAR_CHART_HEIGHT, 0, 100);
+export function solarGraphLayout(
+  canvasWidth: number,
+  canvasHeight = SOLAR_CHART_HEIGHT,
+): ChartGraphLayout {
+  return graphLayout(canvasWidth, 0, canvasHeight, 0, 100);
 }
 
 /** @deprecated use tempGraphLayout */
@@ -200,6 +221,7 @@ export function drawHourlyChart(
   interpolate: (pts: HourlyPoint[], hour: number) => number,
   showHourLabels: boolean,
   editable = true,
+  showCurve = true,
 ) {
   ctx.fillStyle = style.bg;
   ctx.fillRect(0, top, canvasWidth, blockHeight);
@@ -213,22 +235,24 @@ export function drawHourlyChart(
 
   drawValueScale(ctx, g, style.valueStep, style.unit);
 
-  ctx.strokeStyle = style.line;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  const samples = 96;
-  for (let i = 0; i <= samples; i++) {
-    const hour = (i / samples) * HOURS_PER_DAY;
-    const value = interpolate(points, hour);
-    const x = hourToX(hour, g);
-    const y = valueToY(value, g);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  if (showCurve) {
+    ctx.strokeStyle = style.line;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const samples = 96;
+    for (let i = 0; i <= samples; i++) {
+      const hour = (i / samples) * HOURS_PER_DAY;
+      const value = interpolate(points, hour);
+      const x = hourToX(hour, g);
+      const y = valueToY(value, g);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
   }
-  ctx.stroke();
 
   drawCurrentHourLine(ctx, g, simTimeSec);
-  if (editable) drawControlPoints(ctx, g, points, style.pointStroke);
+  if (editable && showCurve) drawControlPoints(ctx, g, points, style.pointStroke);
 
   ctx.font = "10px system-ui, sans-serif";
   ctx.textAlign = "left";
@@ -291,7 +315,7 @@ export function chartMouseDown(
     };
   }
 
-  const value = yToValue(my, g);
+  const value = clampScheduleValue(yToValue(my, g));
   const next = [...points, { hour, value }];
   return {
     drag: {
@@ -322,7 +346,7 @@ export function chartMouseMove(
   const next = [...points];
   next[drag.pointIndex] = {
     hour: xToHour(mx, g),
-    value: yToValue(my, g),
+    value: clampScheduleValue(yToValue(my, g)),
   };
   return next;
 }
