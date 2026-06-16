@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulation thermique — paroi multicouche</title>
+    <meta
+      name="description"
+      content="Simulateur interactif de transfert thermique à travers une paroi : conduction, convection, rayonnement, canicule, presets bâtiment."
+    />
+    <meta property="og:title" content="Simulation thermique — paroi multicouche" />
+    <meta
+      property="og:description"
+      content="Jouez avec les couches, l'orientation, la ventilation et les profils climat en temps réel."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="panel"></header>
+      <main>
+        <canvas id="sim-canvas"></canvas>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
