@@ -79,17 +79,31 @@ export function createPanel(
     <div class="banner-row banner-title">
       <h1>Simulateur paroi</h1>
       <div class="sim-controls">
-        <button id="btn-play" type="button" aria-pressed="false">▶ Lecture</button>
-        <label>Vitesse
-          <select id="sel-speed">
+        <button id="btn-play" type="button" aria-pressed="false" title="Lancer / mettre en pause la simulation temporelle">▶ Lecture</button>
+        <label title="Facteur de vitesse du temps simulé (1 s réelle → plusieurs secondes simulées)">Vitesse
+          <select id="sel-speed" title="Vitesse de la simulation">
             <option value="10">×10</option>
             <option value="100" selected>×100</option>
             <option value="1000">×1000</option>
           </select>
         </label>
-        <button id="btn-ext-auto" type="button" class="active">T ext. manuelle</button>
-        <button id="btn-reset" type="button">Réinit. T</button>
-        <button id="btn-fullscreen" type="button" aria-pressed="false" title="Plein écran">⛶ Plein écran</button>
+        <button
+          id="btn-ext-auto"
+          type="button"
+          class="active"
+          title="Basculer entre profil horaire extérieur (graphique) et réglage manuel par le thermomètre extérieur"
+        >T ext. manuelle</button>
+        <button
+          id="btn-reset"
+          type="button"
+          title="Réinitialiser les températures (mur, air, cavités) au profil initial"
+        >Réinit. T</button>
+        <button
+          id="btn-fullscreen"
+          type="button"
+          aria-pressed="false"
+          title="Plein écran"
+        >⛶ Plein écran</button>
       </div>
     </div>
     <div class="banner-row banner-wall-presets">
@@ -115,8 +129,18 @@ export function createPanel(
     <div class="chart-legend">
       ${LEGEND_ITEMS.map(
         (item) => `
-        <label class="legend-item" data-series="${item.id}">
-          <input type="checkbox" class="legend-check" data-series="${item.id}" checked />
+        <label
+          class="legend-item"
+          data-series="${item.id}"
+          title="Afficher / masquer la courbe ${item.label.toLowerCase()}"
+        >
+          <input
+            type="checkbox"
+            class="legend-check"
+            data-series="${item.id}"
+            checked
+            aria-label="Afficher / masquer ${item.label}"
+          />
           <span class="legend-swatch" style="background:${item.color}"></span>
           <span class="legend-label">${item.label}</span>
           <span class="legend-value" id="legend-val-${item.id}">—</span>

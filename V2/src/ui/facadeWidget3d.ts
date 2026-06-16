@@ -178,29 +178,67 @@ export function createFacadeWidget3D(
             <span>Orient. <strong id="facade-3d-az">Sud</strong></span>
           </div>
           <span class="facade-3d-hint">Glisser ↔ orientation · ↕ inclinaison</span>
-          <label class="facade-site-field facade-ventilation-field facade-heating-field">Renouvellement air int.
-            <input id="site-ventilation" type="range" min="0" max="4" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
+          <label
+            class="facade-site-field facade-ventilation-field facade-heating-field"
+            title="Renouvellement d'air du volume intérieur (volumes d'air neufs par heure)"
+          >Renouvellement air int.
+            <input
+              id="site-ventilation"
+              type="range"
+              min="0"
+              max="4"
+              step="0.1"
+              value="${DEFAULT_VENTILATION_ACH}"
+            />
             <span id="site-ventilation-val" class="facade-site-meta">${DEFAULT_VENTILATION_ACH.toFixed(1)} vol/h</span>
             <span class="facade-site-unit">0 = aucun · 1 = 100 % du volume / h</span>
           </label>
         </div>
         <div class="facade-3d-site">
-          <label class="facade-site-field">Latitude
-            <input id="site-lat" type="number" min="-60" max="70" step="0.5" value="${initialSite.latitudeDeg}" />
+          <label
+            class="facade-site-field"
+            title="Latitude du site (contrôle la hauteur du soleil et les saisons)"
+          >Latitude
+            <input
+              id="site-lat"
+              type="number"
+              min="-60"
+              max="70"
+              step="0.5"
+              value="${initialSite.latitudeDeg}"
+            />
             <span class="facade-site-unit">° (N + / S −)</span>
           </label>
-          <label class="facade-site-field">Saison
+          <label
+            class="facade-site-field"
+            title="Choisit un profil de saison (date, climat, températures extérieures)"
+          >Saison
             <select id="site-preset">${presetOptionsHtml(DEFAULT_CLIMATE_PRESET_ID)}</select>
           </label>
-          <label class="facade-site-field">Date
+          <label
+            class="facade-site-field"
+            title="Date utilisée pour la déclinaison solaire (position du soleil dans l'année)"
+          >Date
             <input id="site-date" type="date" value="${initialSite.dateISO}" />
           </label>
-          <label class="facade-site-field">Couverture du ciel
+          <label
+            class="facade-site-field"
+            title="Couverture nuageuse : influence le soleil reçu et la température radiative du ciel"
+          >Couverture du ciel
             <select id="site-sky-cover">${skyCoverOptionsHtml(initialSite.skyCover)}</select>
           </label>
-          <label class="facade-site-field facade-heating-field">
-            Chauffage / clim.
-            <input id="site-heating" type="range" min="-100" max="100" step="1" value="0" />
+          <label
+            class="facade-site-field facade-heating-field"
+            title="Apport thermique uniforme à l'air intérieur (chauffage + / climatisation −) en W/m²"
+          >Chauffage / clim.
+            <input
+              id="site-heating"
+              type="range"
+              min="-100"
+              max="100"
+              step="1"
+              value="0"
+            />
             <span id="site-heating-val" class="facade-site-meta">0 W/m²</span>
           </label>
           <span id="site-decl" class="facade-site-meta"></span>

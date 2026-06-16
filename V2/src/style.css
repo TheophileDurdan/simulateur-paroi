@@ -260,12 +260,14 @@ body.is-fullscreen #banner {
 
 .sim-controls button,
 #btn-add {
-  padding: 4px 10px;
+  padding: 4px 12px;
   cursor: pointer;
   border: 1px solid #bbb;
   border-radius: 4px;
   background: #fafafa;
   font-size: 0.85rem;
+  line-height: 1.2;
+  min-height: 28px;
 }
 
 .sim-controls button:hover,
