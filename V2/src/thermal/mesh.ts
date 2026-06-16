@@ -1,6 +1,6 @@
 import { resolveLayer } from "../materials";
 import type { Layer, NodeProps } from "../types";
-import { activeLayers, DX } from "../types";
+import { activeLayers, DX, DX_MM } from "../types";
 import { applySegmentContrast } from "./meshContrast";
 
 export interface AirGapLink {
@@ -96,7 +96,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
   const segments: VisualSegment[] = [];
   let pending: PendingGap | null = null;
   let pendingFilm: PendingFilm | null = null;
-  let pos = 0.5;
+  let pos = DX_MM / 2;
 
   for (const layer of active) {
     const props = resolveLayer(layer);
@@ -127,7 +127,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
       continue;
     }
 
-    const n = Math.max(1, Math.round(layer.thicknessMm));
+    const n = Math.max(1, Math.round(layer.thicknessMm / DX_MM));
     const nodeStart = nodes.length;
     const filmForGap = pendingFilm;
 
@@ -194,7 +194,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
         layerId: layer.id,
       });
       positionsMm.push(pos);
-      pos += 1;
+      pos += DX_MM;
     }
 
     segments.push({

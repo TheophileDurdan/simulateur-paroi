@@ -62,7 +62,10 @@ export interface SimulationState {
 
 export type SimSpeed = 10 | 100 | 1000;
 
-export const DX = 0.001;
+/** Pas spatial du maillage (m) — 1 cm par nœud. */
+export const DX = 0.01;
+/** Épaisseur représentée par un nœud solide (mm). */
+export const DX_MM = DX * 1000;
 export const AIR_RHO = 1.2;
 export const AIR_CP = 1005;
 export const AIR_DEPTH = 5.0;
