@@ -169,7 +169,7 @@ function tempDisplayRange() {
     tempPts,
     [history.airInt, history.wallInt, history.wallExt],
     (h) => interpolate(tempPts, h),
-    [solver.tAirInt, currentTExt(), ...solver.wallTemps],
+    [solver.tAirInt, currentTExt(), ...solver.wallTemps, ...solver.cavityTemps],
   );
 }
 
@@ -224,6 +224,7 @@ function draw() {
     wallLayout(),
     solver.mesh,
     solver.wallTemps,
+    solver.cavityTemps,
     solver.tAirInt,
     currentTExt(),
   );

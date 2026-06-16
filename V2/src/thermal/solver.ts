@@ -1,5 +1,5 @@
 import type { FacadeOrientation } from "../facadeGeometry";
-import { hCavityConvection, hExterior, hInterior, hOpenCavity, hVentilatedCavity, ventilationHeatCoeff } from "./convection";
+import { hCavityConvection, hCavitySurface, hCavityToExterior, cavityAirCapacitance, hExterior, hInterior, ventilationHeatCoeff } from "./convection";
 import {
   buildMesh,
   interfaceLambda,
@@ -26,6 +26,8 @@ export class ThermalSolver {
   mesh: ThermalMesh;
   tAirInt = INITIAL_TEMP;
   wallTemps: number[] = [];
+  /** Température de l'air dans chaque lame ventilée/ouverte (une entrée par cavité). */
+  cavityTemps: number[] = [];
   tExt = INITIAL_TEMP;
   simTime = 0;
   facade: FacadeOrientation = { tiltFromHorizontal: 90, azimuthFacing: 180 };
@@ -63,12 +65,25 @@ export class ThermalSolver {
   resetTemps() {
     this.tAirInt = INITIAL_TEMP;
     this.wallTemps = this.mesh.nodes.map(() => INITIAL_TEMP);
+    this.syncCavityTemps(INITIAL_TEMP);
+  }
+
+  private syncCavityTemps(value: number) {
+    this.cavityTemps = this.mesh.gaps.map(() => value);
+  }
+
+  private cavityIndexForGap(gap: { layerId: string }): number {
+    return this.mesh.gaps.findIndex((g) => g.layerId === gap.layerId);
   }
 
   rebuildMesh(layers: Layer[], preserve = true) {
     const oldPositions = this.mesh.positionsMm;
     const oldTemps = this.wallTemps;
     const oldAir = this.tAirInt;
+    const oldCavityByLayer = new Map<string, number>();
+    for (let i = 0; i < this.mesh.gaps.length; i++) {
+      oldCavityByLayer.set(this.mesh.gaps[i].layerId, this.cavityTemps[i] ?? oldAir);
+    }
 
     this.mesh = buildMesh(layers);
 
@@ -90,6 +105,9 @@ export class ThermalSolver {
       }
       return best;
     });
+    this.cavityTemps = this.mesh.gaps.map(
+      (g) => oldCavityByLayer.get(g.layerId) ?? oldAir,
+    );
   }
 
   private airCap(): number {
@@ -116,13 +134,16 @@ export class ThermalSolver {
     i: number,
     tExt: number,
     nodes: ThermalMesh["nodes"],
+    cavityTemps: number[],
   ): number {
     const iface = this.mesh.interfaces[i];
     if (iface?.gap?.ventilated) {
       const g = iface.gap;
-      const hV = g.open ? hOpenCavity(g.thicknessMm) : hVentilatedCavity(g.thicknessMm);
+      const idx = this.cavityIndexForGap(g);
+      const tCav = idx >= 0 ? cavityTemps[idx] : tExt;
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, g.thicknessMm);
       return (
-        hV * (temps[i] - tExt) +
+        hS * (temps[i] - tCav) +
         radiantFluxT4(temps[i], temps[i + 1], g.epsilonLeft, g.epsilonRight)
       );
     }
@@ -135,15 +156,15 @@ export class ThermalSolver {
     i: number,
     tExt: number,
     nodes: ThermalMesh["nodes"],
+    cavityTemps: number[],
   ): number {
     const iface = this.mesh.interfaces[i - 1];
     if (iface?.gap?.ventilated) {
       const g = iface.gap;
-      const hV = g.open ? hOpenCavity(g.thicknessMm) : hVentilatedCavity(g.thicknessMm);
-      return (
-        radiantFluxT4(temps[i - 1], temps[i], g.epsilonLeft, g.epsilonRight) +
-        hV * (tExt - temps[i])
-      );
+      const idx = this.cavityIndexForGap(g);
+      const tCav = idx >= 0 ? cavityTemps[idx] : tExt;
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, g.thicknessMm);
+      return hS * (tCav - temps[i]);
     }
     return this.fluxBetween(temps, i - 1, i, nodes);
   }
@@ -186,10 +207,24 @@ export class ThermalSolver {
     tAirInt: number,
     tExt: number,
     qSolar: number,
-  ): { dWall: number[]; dAir: number } {
+    cavityTemps: number[],
+  ): { dWall: number[]; dAir: number; dCavity: number[] } {
     const n = wallTemps.length;
     const dWall = new Array<number>(n).fill(0);
-    if (n === 0) return { dWall, dAir: 0 };
+    const dCavity = this.mesh.gaps.map((gap, idx) => {
+      if (!gap.ventilated) return 0;
+      const tCav = cavityTemps[idx];
+      const tL = wallTemps[gap.leftNodeIndex];
+      const tR = wallTemps[gap.rightNodeIndex];
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, gap.thicknessMm);
+      const hV = hCavityToExterior(gap.thicknessMm, !!gap.open);
+      const cap = cavityAirCapacitance(gap.thicknessMm, AIR_RHO, AIR_CP);
+      const q =
+        hS * (tL - tCav) + hS * (tR - tCav) + hV * (tExt - tCav);
+      return q / cap;
+    });
+
+    if (n === 0) return { dWall, dAir: 0, dCavity };
 
     const nodes = this.mesh.nodes;
     const hExt = hExterior(this.facade.tiltFromHorizontal);
@@ -203,13 +238,13 @@ export class ThermalSolver {
 
     const qRight0 =
       n > 1
-        ? this.fluxLeavingRight(wallTemps, 0, tExt, nodes)
+        ? this.fluxLeavingRight(wallTemps, 0, tExt, nodes, cavityTemps)
         : hInt * (wallTemps[0] - tAirInt);
     dWall[0] = (qConvExt + qSkyRad + qSolar - qRight0) / nodeCap(nodes[0]);
 
     for (let i = 1; i < n - 1; i++) {
-      const qIn = this.fluxEnteringFromLeft(wallTemps, i, tExt, nodes);
-      const qOut = this.fluxLeavingRight(wallTemps, i, tExt, nodes);
+      const qIn = this.fluxEnteringFromLeft(wallTemps, i, tExt, nodes, cavityTemps);
+      const qOut = this.fluxLeavingRight(wallTemps, i, tExt, nodes, cavityTemps);
       dWall[i] = (qIn - qOut) / nodeCap(nodes[i]);
     }
 
@@ -217,7 +252,7 @@ export class ThermalSolver {
       dWall[0] =
         (qConvExt + qSkyRad + qSolar - hInt * (wallTemps[0] - tAirInt)) / nodeCap(nodes[0]);
     } else {
-      const qIn = this.fluxEnteringFromLeft(wallTemps, n - 1, tExt, nodes);
+      const qIn = this.fluxEnteringFromLeft(wallTemps, n - 1, tExt, nodes, cavityTemps);
       const qInt = hInt * (wallTemps[n - 1] - tAirInt);
       dWall[n - 1] = (qIn - qInt) / nodeCap(nodes[n - 1]);
     }
@@ -226,23 +261,27 @@ export class ThermalSolver {
     const qVent = this.ventilationFlux(tAirInt, tExt);
     const dAir = (qWall + qVent + this.interiorHeatingWm2) / this.airCap();
 
-    return { dWall, dAir };
+    return { dWall, dAir, dCavity };
   }
 
   private rk4Step(dt: number, tExt: number, qSolar: number) {
     const y0 = [...this.wallTemps];
     const a0 = this.tAirInt;
+    const c0 = [...this.cavityTemps];
 
-    const k1 = this.derivatives(y0, a0, tExt, qSolar);
+    const k1 = this.derivatives(y0, a0, tExt, qSolar, c0);
     const w2 = y0.map((v, i) => v + 0.5 * dt * k1.dWall[i]);
     const a2 = a0 + 0.5 * dt * k1.dAir;
-    const k2 = this.derivatives(w2, a2, tExt, qSolar);
+    const c2 = c0.map((v, i) => v + 0.5 * dt * k1.dCavity[i]);
+    const k2 = this.derivatives(w2, a2, tExt, qSolar, c2);
     const w3 = y0.map((v, i) => v + 0.5 * dt * k2.dWall[i]);
     const a3 = a0 + 0.5 * dt * k2.dAir;
-    const k3 = this.derivatives(w3, a3, tExt, qSolar);
+    const c3 = c0.map((v, i) => v + 0.5 * dt * k2.dCavity[i]);
+    const k3 = this.derivatives(w3, a3, tExt, qSolar, c3);
     const w4 = y0.map((v, i) => v + dt * k3.dWall[i]);
     const a4 = a0 + dt * k3.dAir;
-    const k4 = this.derivatives(w4, a4, tExt, qSolar);
+    const c4 = c0.map((v, i) => v + dt * k3.dCavity[i]);
+    const k4 = this.derivatives(w4, a4, tExt, qSolar, c4);
 
     this.wallTemps = y0.map(
       (v, i) =>
@@ -252,6 +291,12 @@ export class ThermalSolver {
     );
     this.tAirInt =
       a0 + (dt / 6) * (k1.dAir + 2 * k2.dAir + 2 * k3.dAir + k4.dAir);
+    this.cavityTemps = c0.map(
+      (v, i) =>
+        v +
+        (dt / 6) *
+          (k1.dCavity[i] + 2 * k2.dCavity[i] + 2 * k3.dCavity[i] + k4.dCavity[i]),
+    );
   }
 
   step(dtSim: number, tExt: number, qSolar: number) {

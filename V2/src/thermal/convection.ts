@@ -29,7 +29,35 @@ export function ventilationHeatCoeff(
   return (rho * cp * depthM * Math.max(0, achPerHour)) / 3600;
 }
 
-/** Convection dans une lame d'air ventilée (échange avec l'extérieur), W/m²·K */
+/** Convection dans une lame d'air ventilée à grille (échange partiel avec l'ext.), W/m²·K */
+export function hCavityGrilleVentilation(thicknessMm: number): number {
+  const e = Math.max(20, thicknessMm);
+  if (e <= 40) return 5;
+  if (e <= 80) return 4;
+  return 3;
+}
+
+/** Lame ouverte : échange fort avec l'ext. → T air lame ≈ T ext., W/m²·K */
+export function hCavityOpenVentilation(_thicknessMm: number): number {
+  return 45;
+}
+
+export function hCavityToExterior(thicknessMm: number, open: boolean): number {
+  return open ? hCavityOpenVentilation(thicknessMm) : hCavityGrilleVentilation(thicknessMm);
+}
+
+/** Capacité thermique volumique de l'air de cavité (J/(m²·K) par m² de paroi). */
+export function cavityAirCapacitance(thicknessMm: number, rho = 1.2, cp = 1005): number {
+  const depthM = Math.max(0.005, thicknessMm / 1000);
+  return rho * cp * depthM;
+}
+
+/** Convection face paroi ↔ air de cavité (un côté), W/m²·K */
+export function hCavitySurface(tiltFromHorizontalDeg: number, thicknessMm: number): number {
+  return hCavityConvection(tiltFromHorizontalDeg, thicknessMm) * 0.5;
+}
+
+/** @deprecated Ancien couplage direct paroi–ext. ; conservé pour référence. */
 export function hVentilatedCavity(thicknessMm: number): number {
   const e = Math.max(20, thicknessMm);
   if (e <= 40) return 18;
@@ -37,7 +65,7 @@ export function hVentilatedCavity(thicknessMm: number): number {
   return 12;
 }
 
-/** Lame d'air ouverte (sous panneau solaire, ventilation naturelle renforcée), W/m²·K */
+/** @deprecated Utiliser hCavityOpenVentilation */
 export function hOpenCavity(thicknessMm: number): number {
   return hVentilatedCavity(thicknessMm) * 1.35;
 }

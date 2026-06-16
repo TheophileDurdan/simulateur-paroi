@@ -221,7 +221,7 @@ export function visualWeights(mesh: ThermalMesh): number[] {
     if (seg.kind === "solid") {
       for (let i = 0; i < seg.nodeCount; i++) weights.push(1);
     } else if (seg.kind === "gap") {
-      weights.push(Math.max(2, Math.round(seg.thicknessMm / 8)));
+      weights.push(Math.max(1, Math.round(seg.thicknessMm)));
     } else {
       weights.push(Math.max(1, Math.round(seg.thicknessMm)));
     }

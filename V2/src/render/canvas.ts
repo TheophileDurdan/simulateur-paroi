@@ -5,10 +5,13 @@ import {
 } from "../types";
 import type { ThermalMesh } from "../thermal/solver";
 import { visualWeights } from "../thermal/solver";
+import type { VisualSegment } from "../thermal/mesh";
+import { INITIAL_TEMP } from "../types";
 import type { TempDisplayRange } from "./scheduleEditor";
 
 const WALL_TOP_PAD = 8;
 const TEMP_BAR_COLOR = "rgba(220, 40, 40, 0.5)";
+const GAP_AIR_BAR_COLOR = "rgba(2, 119, 189, 0.42)";
 const GAP_HATCH = "rgba(100, 180, 230, 0.35)";
 const FILM_SHINE = "rgba(255, 255, 255, 0.45)";
 
@@ -71,10 +74,11 @@ function drawTempBar(
   layout: WallLayout,
   temp: number,
   interactive = false,
+  fillColor = TEMP_BAR_COLOR,
 ) {
   const top = Math.max(layout.wallTop, tempToY(temp, layout));
 
-  ctx.fillStyle = TEMP_BAR_COLOR;
+  ctx.fillStyle = fillColor;
   ctx.fillRect(x, top, width, layout.baselineY - top);
 
   if (interactive) {
@@ -100,6 +104,48 @@ function drawAirZoneTemp(
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(`${temp.toFixed(1)} °C`, zoneX + zoneW / 2, midY);
+}
+
+function gapDisplayTemp(
+  seg: VisualSegment,
+  mesh: ThermalMesh,
+  wallTemps: number[],
+  cavityTemps: number[],
+): number {
+  const gap = mesh.gaps.find((g) => g.layerId === seg.layerId);
+  if (!gap) return INITIAL_TEMP;
+  if (gap.ventilated) {
+    const idx = mesh.gaps.indexOf(gap);
+    return cavityTemps[idx] ?? INITIAL_TEMP;
+  }
+  const tL = wallTemps[gap.leftNodeIndex] ?? INITIAL_TEMP;
+  const tR = wallTemps[gap.rightNodeIndex] ?? INITIAL_TEMP;
+  return (tL + tR) / 2;
+}
+
+function drawGapTempGauge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  width: number,
+  layout: WallLayout,
+  temp: number,
+) {
+  drawTempBar(ctx, x, width, layout, temp, false, GAP_AIR_BAR_COLOR);
+
+  if (width < 18) return;
+
+  const barTop = Math.max(layout.wallTop, tempToY(temp, layout));
+  const midY = (barTop + layout.baselineY) / 2;
+
+  ctx.fillStyle = "#0277bd";
+  ctx.font = width >= 44 ? "bold 10px system-ui, sans-serif" : "bold 8px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (width >= 44) {
+    ctx.fillText(`${temp.toFixed(1)} °C`, x + width / 2, midY);
+  } else {
+    ctx.fillText(`${temp.toFixed(0)}°`, x + width / 2, midY);
+  }
 }
 
 function drawHorizontalGrid(ctx: CanvasRenderingContext2D, layout: WallLayout) {
@@ -156,6 +202,7 @@ export function renderWall(
   layout: WallLayout,
   mesh: ThermalMesh,
   wallTemps: number[],
+  cavityTemps: number[],
   tAirInt: number,
   tExt: number,
 ) {
@@ -240,7 +287,12 @@ export function renderWall(
         drawTempBar(ctx, x, w, layout, wallTemps[seg.nodeStart + i]);
         x += w;
       }
-    } else if (seg.kind === "film" || seg.kind === "gap") {
+    } else if (seg.kind === "gap") {
+      const w = layout.colWidths[col++] ?? 0;
+      const temp = gapDisplayTemp(seg, mesh, wallTemps, cavityTemps);
+      drawGapTempGauge(ctx, x, w, layout, temp);
+      x += w;
+    } else if (seg.kind === "film") {
       col++;
       x += layout.colWidths[col - 1] ?? 0;
     }
