@@ -164,7 +164,8 @@ export class ThermalSolver {
       const idx = this.cavityIndexForGap(g);
       const tCav = idx >= 0 ? cavityTemps[idx] : tExt;
       const hS = hCavitySurface(this.facade.tiltFromHorizontal, g.thicknessMm);
-      return hS * (tCav - temps[i]);
+      const qRad = radiantFluxT4(temps[i - 1], temps[i], g.epsilonLeft, g.epsilonRight);
+      return hS * (tCav - temps[i]) + qRad;
     }
     return this.fluxBetween(temps, i - 1, i, nodes);
   }
@@ -187,11 +188,9 @@ export class ThermalSolver {
       const hCv = hCavityConvection(this.facade.tiltFromHorizontal, gap.thicknessMm);
       const qConv = hCv * (temps[i] - temps[j]);
       const qRad = radiantFluxT4(temps[i], temps[j], gap.epsilonLeft, gap.epsilonRight);
-      let q = qConv + qRad;
-      if (iface.filmResistance && iface.filmResistance > 0) {
-        q += (temps[i] - temps[j]) / iface.filmResistance;
-      }
-      return q;
+      // Ne pas ajouter la conductance de la feuille mince en parallèle : elle court-circuiterait
+      // le rayonnement IR de la cavité (Al λ≈160 W/m·K pour 0,1 mm).
+      return qConv + qRad;
     }
 
     if (iface.filmResistance && iface.filmResistance > 0) {
