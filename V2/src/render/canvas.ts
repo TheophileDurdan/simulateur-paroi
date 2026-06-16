@@ -3,6 +3,7 @@ import {
   AIR_ZONE_WIDTH,
   MARGIN_BOTTOM,
 } from "../types";
+import { segmentBorderStroke } from "../colorContrast";
 import type { ThermalMesh } from "../thermal/solver";
 import { visualWeights } from "../thermal/solver";
 import type { VisualSegment } from "../thermal/mesh";
@@ -239,7 +240,20 @@ export function renderWall(
 
   let x = wallX;
   let col = 0;
+  let prevSegmentColor: string | null = null;
   for (const seg of mesh.segments) {
+    const segmentColor =
+      seg.kind === "solid" && seg.nodeCount > 0
+        ? mesh.nodes[seg.nodeStart].color
+        : seg.color;
+    if (prevSegmentColor !== null) {
+      ctx.strokeStyle = segmentBorderStroke(prevSegmentColor, segmentColor);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, wallTop);
+      ctx.lineTo(x + 0.5, height);
+      ctx.stroke();
+    }
     if (seg.kind === "solid") {
       for (let i = 0; i < seg.nodeCount; i++) {
         const w = layout.colWidths[col++] ?? 0;
@@ -287,6 +301,7 @@ export function renderWall(
       }
       x += w;
     }
+    prevSegmentColor = segmentColor;
   }
 
   ctx.fillStyle = "#fce8e8";

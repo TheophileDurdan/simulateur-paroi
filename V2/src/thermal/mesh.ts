@@ -1,6 +1,7 @@
 import { resolveLayer } from "../materials";
 import type { Layer, NodeProps } from "../types";
 import { activeLayers, DX } from "../types";
+import { applySegmentContrast } from "./meshContrast";
 
 export interface AirGapLink {
   leftNodeIndex: number;
@@ -207,6 +208,8 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
   }
 
   const interfaces = buildInterfaces(nodes.length, gaps, films);
+
+  applySegmentContrast(segments, nodes);
 
   return { nodes, positionsMm, gaps, films, segments, interfaces };
 }
