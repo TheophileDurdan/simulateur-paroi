@@ -124,7 +124,7 @@ function drawAirZoneTemp(
   const barTop = Math.max(layout.wallTop, tempToY(temp, layout));
   const midY = (barTop + layout.baselineY) / 2;
 
-  ctx.fillStyle = barLabelColor(temp);
+  ctx.fillStyle = "#1a1a1a";
   ctx.font = "bold 14px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
