@@ -305,9 +305,8 @@ body {
   border-top: 1px solid #e8e8e8;
 }
 
-.facade-ventilation-field select {
-  cursor: pointer;
-  background: #fff;
+.facade-ventilation-field input {
+  width: 4.5rem;
 }
 
 .ventilation-field {

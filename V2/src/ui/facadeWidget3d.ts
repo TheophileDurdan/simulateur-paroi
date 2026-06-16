@@ -156,28 +156,6 @@ function presetOptionsHtml(selected: ClimatePresetId): string {
   ).join("");
 }
 
-function ventilationOptionsHtml(selected: number): string {
-  const options: { value: number; label: string }[] = [
-    { value: 0, label: "0 — aucun renouvellement" },
-    { value: 0.5, label: "0,5 vol/h" },
-    { value: 1, label: "1 vol/h (100 % du volume / h)" },
-    { value: 2, label: "2 vol/h" },
-    { value: 3, label: "3 vol/h" },
-    { value: 6, label: "6 vol/h" },
-    { value: 10, label: "10 vol/h" },
-  ];
-  const hasSelected = options.some((o) => o.value === selected);
-  const items = hasSelected
-    ? options
-    : [...options, { value: selected, label: `${selected} vol/h` }];
-  return items
-    .map(
-      (o) =>
-        `<option value="${o.value}"${o.value === selected ? " selected" : ""}>${o.label}</option>`,
-    )
-    .join("");
-}
-
 export function createFacadeWidget3D(
   container: HTMLElement,
   initial: FacadeOrientation = DEFAULT_FACADE,
@@ -201,8 +179,8 @@ export function createFacadeWidget3D(
           </div>
           <span class="facade-3d-hint">Glisser ↔ orientation · ↕ inclinaison</span>
           <label class="facade-site-field facade-ventilation-field">Renouvellement air int.
-            <select id="site-ventilation">${ventilationOptionsHtml(DEFAULT_VENTILATION_ACH)}</select>
-            <span class="facade-site-unit">0 = aucun · 1 = 100 % du volume / h</span>
+            <input id="site-ventilation" type="number" min="0" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
+            <span class="facade-site-unit">vol/h · 0 = aucun · 1 = 100 % du volume / h</span>
           </label>
         </div>
         <div class="facade-3d-site">
@@ -243,7 +221,7 @@ export function createFacadeWidget3D(
   const heatingInput = container.querySelector<HTMLInputElement>("#site-heating")!;
   const heatingValEl = container.querySelector<HTMLSpanElement>("#site-heating-val")!;
   const declEl = container.querySelector<HTMLSpanElement>("#site-decl")!;
-  const ventilationSelect = container.querySelector<HTMLSelectElement>("#site-ventilation")!;
+  const ventilationInput = container.querySelector<HTMLInputElement>("#site-ventilation")!;
 
   function updateHeatingReadout() {
     const w = parseInt(heatingInput.value, 10) || 0;
@@ -262,10 +240,12 @@ export function createFacadeWidget3D(
   updateHeatingReadout();
   heatingInput.addEventListener("input", emitHeating);
 
-  ventilationSelect.addEventListener("change", () => {
-    const v = Math.max(0, parseFloat(ventilationSelect.value) || 0);
+  function emitVentilation() {
+    const v = Math.max(0, parseFloat(ventilationInput.value) || 0);
     callbacks.onVentilationChange(v);
-  });
+  }
+
+  ventilationInput.addEventListener("change", emitVentilation);
 
   let tilt = initial.tiltFromHorizontal;
   let azimuth = initial.azimuthFacing;
