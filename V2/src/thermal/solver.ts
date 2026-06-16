@@ -1,7 +1,7 @@
 import type { FacadeOrientation } from "../facadeGeometry";
 import type { SkyCover } from "../skyCover";
 import { DEFAULT_SKY_COVER } from "../skyCover";
-import { hCavityConvection, hCavityToExterior, cavityAirCapacitance, hExterior, hInterior, ventilationHeatCoeff } from "./convection";
+import { hCavityConvection, hCavitySurface, hCavityToExterior, cavityAirCapacitance, hExterior, hInterior, ventilationHeatCoeff } from "./convection";
 import {
   buildMesh,
   interfaceLambda,
@@ -79,6 +79,10 @@ export class ThermalSolver {
     this.cavityTemps = this.mesh.gaps.map(() => value);
   }
 
+  private cavityIndexForGap(gap: { layerId: string }): number {
+    return this.mesh.gaps.findIndex((g) => g.layerId === gap.layerId);
+  }
+
   rebuildMesh(layers: Layer[], preserve = true) {
     const oldPositions = this.mesh.positionsMm;
     const oldTemps = this.wallTemps;
@@ -135,8 +139,21 @@ export class ThermalSolver {
   private fluxLeavingRight(
     temps: number[],
     i: number,
+    tExt: number,
     nodes: ThermalMesh["nodes"],
+    cavityTemps: number[],
   ): number {
+    const iface = this.mesh.interfaces[i];
+    if (iface?.gap?.ventilated) {
+      const g = iface.gap;
+      const idx = this.cavityIndexForGap(g);
+      const tCav = idx >= 0 ? cavityTemps[idx] : tExt;
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, g.thicknessMm);
+      return (
+        hS * (temps[i] - tCav) +
+        radiantFluxT4(temps[i], temps[i + 1], g.epsilonLeft, g.epsilonRight)
+      );
+    }
     return this.fluxBetween(temps, i, i + 1, nodes);
   }
 
@@ -144,8 +161,19 @@ export class ThermalSolver {
   private fluxEnteringFromLeft(
     temps: number[],
     i: number,
+    tExt: number,
     nodes: ThermalMesh["nodes"],
+    cavityTemps: number[],
   ): number {
+    const iface = this.mesh.interfaces[i - 1];
+    if (iface?.gap?.ventilated) {
+      const g = iface.gap;
+      const idx = this.cavityIndexForGap(g);
+      const tCav = idx >= 0 ? cavityTemps[idx] : tExt;
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, g.thicknessMm);
+      const qRad = radiantFluxT4(temps[i - 1], temps[i], g.epsilonLeft, g.epsilonRight);
+      return hS * (tCav - temps[i]) + qRad;
+    }
     return this.fluxBetween(temps, i - 1, i, nodes);
   }
 
@@ -194,7 +222,7 @@ export class ThermalSolver {
       const tCav = cavityTemps[idx];
       const tL = wallTemps[gap.leftNodeIndex];
       const tR = wallTemps[gap.rightNodeIndex];
-      const hS = hCavityConvection(this.facade.tiltFromHorizontal, gap.thicknessMm);
+      const hS = hCavitySurface(this.facade.tiltFromHorizontal, gap.thicknessMm);
       const hV = hCavityToExterior(gap.thicknessMm, !!gap.open);
       const cap = cavityAirCapacitance(gap.thicknessMm, AIR_RHO, AIR_CP);
       const q =
@@ -216,13 +244,13 @@ export class ThermalSolver {
 
     const qRight0 =
       n > 1
-        ? this.fluxLeavingRight(wallTemps, 0, nodes)
+        ? this.fluxLeavingRight(wallTemps, 0, tExt, nodes, cavityTemps)
         : hInt * (wallTemps[0] - tAirInt);
     dWall[0] = (qConvExt + qSkyRad + qSolar - qRight0) / nodeCap(nodes[0]);
 
     for (let i = 1; i < n - 1; i++) {
-      const qIn = this.fluxEnteringFromLeft(wallTemps, i, nodes);
-      const qOut = this.fluxLeavingRight(wallTemps, i, nodes);
+      const qIn = this.fluxEnteringFromLeft(wallTemps, i, tExt, nodes, cavityTemps);
+      const qOut = this.fluxLeavingRight(wallTemps, i, tExt, nodes, cavityTemps);
       dWall[i] = (qIn - qOut) / nodeCap(nodes[i]);
     }
 
@@ -230,7 +258,7 @@ export class ThermalSolver {
       dWall[0] =
         (qConvExt + qSkyRad + qSolar - hInt * (wallTemps[0] - tAirInt)) / nodeCap(nodes[0]);
     } else {
-      const qIn = this.fluxEnteringFromLeft(wallTemps, n - 1, nodes);
+      const qIn = this.fluxEnteringFromLeft(wallTemps, n - 1, tExt, nodes, cavityTemps);
       const qInt = hInt * (wallTemps[n - 1] - tAirInt);
       dWall[n - 1] = (qIn - qInt) / nodeCap(nodes[n - 1]);
     }
