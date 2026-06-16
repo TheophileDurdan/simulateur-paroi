@@ -431,6 +431,11 @@ window.addEventListener("resize", () => {
   draw();
 });
 
+document.addEventListener("fullscreenchange", () => {
+  resize();
+  draw();
+});
+
 resize();
 draw();
 requestAnimationFrame(frame);

@@ -89,6 +89,7 @@ export function createPanel(
         </label>
         <button id="btn-ext-auto" type="button" class="active">T ext. manuelle</button>
         <button id="btn-reset" type="button">Réinit. T</button>
+        <button id="btn-fullscreen" type="button" aria-pressed="false" title="Plein écran">⛶ Plein écran</button>
       </div>
     </div>
     <div class="banner-row banner-wall-presets">
@@ -128,6 +129,8 @@ export function createPanel(
   const selSpeed = roots.banner.querySelector<HTMLSelectElement>("#sel-speed")!;
   const btnReset = roots.banner.querySelector<HTMLButtonElement>("#btn-reset")!;
   const btnExtAuto = roots.banner.querySelector<HTMLButtonElement>("#btn-ext-auto")!;
+  const btnFullscreen = roots.banner.querySelector<HTMLButtonElement>("#btn-fullscreen")!;
+  const appEl = document.querySelector<HTMLDivElement>("#app")!;
   const btnAdd = roots.layersZone.querySelector<HTMLButtonElement>("#btn-add")!;
   const layersList = roots.layersZone.querySelector<HTMLDivElement>("#layers-list")!;
   const readExtMode = roots.tempHeader.querySelector<HTMLSpanElement>("#read-ext-mode")!;
@@ -366,6 +369,33 @@ export function createPanel(
   );
   btnReset.addEventListener("click", () => callbacks.onResetTemps());
   btnExtAuto.addEventListener("click", () => callbacks.onExtAutoToggle());
+
+  function updateFullscreenButton() {
+    const on = document.fullscreenElement === appEl;
+    btnFullscreen.textContent = on ? "⛶ Quitter plein écran" : "⛶ Plein écran";
+    btnFullscreen.setAttribute("aria-pressed", on ? "true" : "false");
+    btnFullscreen.title = on ? "Quitter le plein écran" : "Plein écran";
+    document.body.classList.toggle("is-fullscreen", on);
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement === appEl) {
+        await document.exitFullscreen();
+      } else if (!document.fullscreenElement) {
+        await appEl.requestFullscreen();
+      }
+    } catch {
+      /* navigateur sans support ou permission refusée */
+    }
+  }
+
+  btnFullscreen.addEventListener("click", () => {
+    void toggleFullscreen();
+  });
+  document.addEventListener("fullscreenchange", updateFullscreenButton);
+  updateFullscreenButton();
+
   btnAdd.addEventListener("click", () => {
     const p = defaultSolidMaterial();
     layers.push({
