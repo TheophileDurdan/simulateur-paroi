@@ -374,6 +374,7 @@ export {
   chartMouseDown,
   chartMouseMove,
   chartMouseUp,
+  solarGraphLayout,
   type ChartSeriesVisibility,
   type ScheduleDragState,
   type TempDisplayRange,
