@@ -2,7 +2,7 @@
 
 Simulateur interactif 1D de transfert thermique à travers une paroi (conduction, convection, rayonnement, lames d'air, presets bâtiment).
 
-**Démo en ligne :** après déploiement → `https://VOTRE-USERNAME.github.io/simulateur-paroi/`
+**Démo en ligne :** après déploiement → `https://TheophileDurdan.github.io/simulateur-paroi/`
 
 ## Application (V2)
 
