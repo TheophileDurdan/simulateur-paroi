@@ -29,6 +29,7 @@ body {
   background: #fff;
   border-bottom: 1px solid #ddd;
   padding: 6px 16px 8px;
+  margin-bottom: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
@@ -296,6 +297,17 @@ body {
   border-color: #2e7d32;
   color: #1b5e20;
   font-weight: 600;
+}
+
+.facade-ventilation-field {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.facade-ventilation-field select {
+  cursor: pointer;
+  background: #fff;
 }
 
 .ventilation-field {

@@ -6,7 +6,6 @@ import {
 } from "../presets/wallPresets";
 import type { Layer, SimSpeed } from "../types";
 import { isLayerEnabled } from "../types";
-import { DEFAULT_VENTILATION_ACH } from "../types";
 import { simTimeToHour } from "../schedule";
 
 import type { SchedulePoint } from "../schedule";
@@ -90,10 +89,6 @@ export function createPanel(
         </label>
         <button id="btn-ext-auto" type="button" class="active">T ext. manuelle</button>
         <button id="btn-reset" type="button">Réinit. T</button>
-        <label class="ventilation-field" title="Renouvellement d'air entre intérieur et extérieur">Ventilation
-          <input type="number" id="inp-ventilation" min="0" max="20" step="0.1" value="${DEFAULT_VENTILATION_ACH}" />
-          <span class="ventilation-unit">vol/h</span>
-        </label>
       </div>
     </div>
     <div class="banner-row banner-wall-presets">
@@ -138,7 +133,6 @@ export function createPanel(
   const readExtMode = roots.tempHeader.querySelector<HTMLSpanElement>("#read-ext-mode")!;
   const simTimeEl = roots.tempHeader.querySelector<HTMLSpanElement>("#sim-time")!;
   const presetButtonsHost = roots.banner.querySelector<HTMLDivElement>("#wall-preset-buttons")!;
-  const inpVentilation = roots.banner.querySelector<HTMLInputElement>("#inp-ventilation")!;
 
   roots.tempLegend.querySelectorAll<HTMLInputElement>(".legend-check").forEach((input) => {
     input.addEventListener("change", () => {
@@ -162,6 +156,9 @@ export function createPanel(
       },
       onInteriorHeatingChange(powerWm2) {
         callbacks.onInteriorHeatingChange(powerWm2);
+      },
+      onVentilationChange(achPerHour) {
+        callbacks.onVentilationChange(achPerHour);
       },
     },
   );
@@ -369,11 +366,6 @@ export function createPanel(
   );
   btnReset.addEventListener("click", () => callbacks.onResetTemps());
   btnExtAuto.addEventListener("click", () => callbacks.onExtAutoToggle());
-  inpVentilation.addEventListener("change", () => {
-    const v = Math.max(0, parseFloat(inpVentilation.value) || 0);
-    inpVentilation.value = String(v);
-    callbacks.onVentilationChange(v);
-  });
   btnAdd.addEventListener("click", () => {
     const p = defaultSolidMaterial();
     layers.push({
