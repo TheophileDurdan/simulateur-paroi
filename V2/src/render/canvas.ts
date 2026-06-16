@@ -88,20 +88,6 @@ function tempToBarColor(tempC: number): string {
   return `rgb(${lerpByte(255, 255, v)}, ${lerpByte(220, 30, v)}, ${lerpByte(0, 0, v)})`;
 }
 
-function createBarGradient(
-  ctx: CanvasRenderingContext2D,
-  centerX: number,
-  layout: WallLayout,
-): CanvasGradient {
-  const grad = ctx.createLinearGradient(centerX, layout.baselineY, centerX, layout.wallTop);
-  for (let t = BAR_COLOR_TEMP_MIN; t <= BAR_COLOR_TEMP_MAX; t += 5) {
-    const y = tempToY(t, layout);
-    const stop = (layout.baselineY - y) / layout.plotHeight;
-    grad.addColorStop(Math.max(0, Math.min(1, stop)), tempToBarColor(t));
-  }
-  return grad;
-}
-
 function barLabelColor(tempC: number): string {
   return tempC > 32 ? "#fff" : "#1a1a1a";
 }
@@ -118,14 +104,8 @@ function drawTempBar(
   const h = layout.baselineY - fillTop;
   if (h <= 0) return;
 
-  const cx = x + width / 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, fillTop, width, h);
-  ctx.clip();
-  ctx.fillStyle = createBarGradient(ctx, cx, layout);
-  ctx.fillRect(x, layout.wallTop, width, layout.plotHeight);
-  ctx.restore();
+  ctx.fillStyle = tempToBarColor(temp);
+  ctx.fillRect(x, fillTop, width, h);
 
   if (interactive) {
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
