@@ -3,7 +3,6 @@ import {
   AIR_ZONE_WIDTH,
   MARGIN_BOTTOM,
 } from "../types";
-import { segmentBorderStroke } from "../colorContrast";
 import type { ThermalMesh } from "../thermal/solver";
 import { visualWeights } from "../thermal/solver";
 import type { VisualSegment } from "../thermal/mesh";
@@ -247,7 +246,7 @@ export function renderWall(
         ? mesh.nodes[seg.nodeStart].color
         : seg.color;
     if (prevSegmentColor !== null) {
-      ctx.strokeStyle = segmentBorderStroke(prevSegmentColor, segmentColor);
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.22)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x + 0.5, wallTop);
