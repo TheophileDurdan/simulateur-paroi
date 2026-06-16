@@ -10,6 +10,7 @@ export interface AirGapLink {
   epsilonRight: number;
   layerId: string;
   ventilated: boolean;
+  open?: boolean;
 }
 
 export interface ThinFilmLink {
@@ -30,6 +31,7 @@ export interface VisualSegment {
   nodeCount: number;
   thicknessMm: number;
   ventilated?: boolean;
+  open?: boolean;
 }
 
 /** Interface entre nœuds consécutifs i et i+1. */
@@ -54,6 +56,7 @@ interface PendingGap {
   layerId: string;
   color: string;
   ventilated: boolean;
+  open?: boolean;
 }
 
 interface PendingFilm {
@@ -96,12 +99,17 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
   for (const layer of layers) {
     const props = resolveLayer(layer);
 
-    if (props.kind === "air_gap" || props.kind === "air_gap_ventilated") {
+    if (
+      props.kind === "air_gap" ||
+      props.kind === "air_gap_ventilated" ||
+      props.kind === "air_gap_open"
+    ) {
       pending = {
         thicknessMm: Math.max(5, layer.thicknessMm),
         layerId: layer.id,
         color: props.color,
-        ventilated: props.kind === "air_gap_ventilated",
+        ventilated: props.kind !== "air_gap",
+        open: props.kind === "air_gap_open",
       };
       continue;
     }
@@ -130,6 +138,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
         nodeCount: 0,
         thicknessMm: pending.thicknessMm,
         ventilated: pending.ventilated,
+        open: pending.open,
       });
       if (filmForGap) {
         segments.push({
@@ -149,6 +158,7 @@ export function buildMesh(layers: Layer[]): ThermalMesh {
         epsilonRight: filmForGap?.epsilon ?? props.epsilon,
         layerId: pending.layerId,
         ventilated: pending.ventilated,
+        open: pending.open,
       });
       pending = null;
       pendingFilm = null;

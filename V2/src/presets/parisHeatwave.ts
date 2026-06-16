@@ -19,8 +19,8 @@ export const PARIS_HEATWAVE_INITIAL_TEMP = getClimatePreset(DEFAULT_CLIMATE_PRES
 
 export function parisHeatwaveLayers(): Layer[] {
   return [
-    { id: crypto.randomUUID(), materialId: "brique-rouge", thicknessMm: 200 },
-    { id: crypto.randomUUID(), materialId: "laine-verre", thicknessMm: 100 },
+    { id: crypto.randomUUID(), materialId: "brique-pleine", thicknessMm: 200 },
+    { id: crypto.randomUUID(), materialId: "laine-roche", thicknessMm: 100 },
     { id: crypto.randomUUID(), materialId: "platre", thicknessMm: 13 },
   ];
 }
@@ -28,10 +28,10 @@ export function parisHeatwaveLayers(): Layer[] {
 /** Paroi démo : brique + lame d'air + laine + feuille Al (effet rayonnement). */
 export function cavityRadiationDemoLayers(): Layer[] {
   return [
-    { id: crypto.randomUUID(), materialId: "brique-rouge", thicknessMm: 200 },
+    { id: crypto.randomUUID(), materialId: "brique-pleine", thicknessMm: 200 },
     { id: crypto.randomUUID(), materialId: "lame-air", thicknessMm: 20 },
     { id: crypto.randomUUID(), materialId: "feuille-alu", thicknessMm: 1 },
-    { id: crypto.randomUUID(), materialId: "laine-verre", thicknessMm: 100 },
+    { id: crypto.randomUUID(), materialId: "laine-roche", thicknessMm: 100 },
     { id: crypto.randomUUID(), materialId: "platre", thicknessMm: 13 },
   ];
 }

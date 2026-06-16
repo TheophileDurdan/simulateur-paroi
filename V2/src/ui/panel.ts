@@ -1,4 +1,4 @@
-import { MATERIALS, getMaterial } from "../materials";
+import { MATERIAL_CATEGORIES, defaultSolidMaterial, getMaterial, materialsByCategory } from "../materials";
 import {
   WALL_PRESETS,
   type WallPreset,
@@ -201,7 +201,10 @@ export function createPanel(
     layersList.innerHTML = "";
     layers.forEach((layer, index) => {
       const preset = getMaterial(layer.materialId);
-      const isGap = preset.kind === "air_gap" || preset.kind === "air_gap_ventilated";
+      const isGap =
+        preset.kind === "air_gap" ||
+        preset.kind === "air_gap_ventilated" ||
+        preset.kind === "air_gap_open";
       const isFilm = preset.kind === "thin_film";
       const row = document.createElement("div");
       row.className = "layer-row";
@@ -212,9 +215,16 @@ export function createPanel(
         </div>
         <input type="color" class="layer-color" value="${layer.color ?? preset.color}" title="Couleur" />
         <select class="layer-material">
-          ${MATERIALS.map(
-            (m) =>
-              `<option value="${m.id}" ${m.id === layer.materialId ? "selected" : ""}>${m.name}</option>`,
+          ${MATERIAL_CATEGORIES.map(
+            (cat) => `
+            <optgroup label="${cat.label}">
+              ${materialsByCategory(cat.id)
+                .map(
+                  (m) =>
+                    `<option value="${m.id}" ${m.id === layer.materialId ? "selected" : ""}>${m.name}</option>`,
+                )
+                .join("")}
+            </optgroup>`,
           ).join("")}
         </select>
         <label class="layer-field">e (mm)
@@ -222,7 +232,13 @@ export function createPanel(
         </label>
         ${
           isGap
-            ? `<span class="layer-gap-hint">${preset.kind === "air_gap_ventilated" ? "Lame ventilée" : "Cavité (conv. + IR)"}</span>`
+            ? `<span class="layer-gap-hint">${
+                preset.kind === "air_gap_ventilated"
+                  ? "Lame ventilée"
+                  : preset.kind === "air_gap_open"
+                    ? "Lame ouverte"
+                    : "Cavité (conv. + IR)"
+              }</span>`
             : isFilm
               ? `<label class="layer-field" title="Émissivité infrarouge (face cavité)">ε
           <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" />
@@ -265,7 +281,12 @@ export function createPanel(
 
       row.querySelector(".layer-thick")!.addEventListener("change", (e) => {
         const kind = getMaterial(layer.materialId).kind;
-        const min = kind === "air_gap" || kind === "air_gap_ventilated" ? 5 : kind === "thin_film" ? 0.1 : 1;
+        const min =
+          kind === "air_gap" || kind === "air_gap_ventilated" || kind === "air_gap_open"
+            ? 5
+            : kind === "thin_film"
+              ? 0.1
+              : 1;
         layer.thicknessMm = Math.max(
           min,
           parseFloat((e.target as HTMLInputElement).value) || min,
@@ -328,7 +349,7 @@ export function createPanel(
     callbacks.onVentilationChange(v);
   });
   btnAdd.addEventListener("click", () => {
-    const p = MATERIALS[0];
+    const p = defaultSolidMaterial();
     layers.push({
       id: crypto.randomUUID(),
       materialId: p.id,

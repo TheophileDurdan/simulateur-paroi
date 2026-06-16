@@ -157,13 +157,25 @@ export function renderWall(
       ctx.fillStyle = seg.color;
       ctx.fillRect(x, wallTop, w, height - wallTop);
       if (seg.ventilated) {
-        ctx.strokeStyle = "rgba(30, 136, 229, 0.55)";
+        ctx.strokeStyle = seg.open
+          ? "rgba(30, 136, 229, 0.4)"
+          : "rgba(30, 136, 229, 0.55)";
         ctx.lineWidth = 1;
-        for (let hx = x + 4; hx < x + w - 4; hx += 8) {
+        const step = seg.open ? 10 : 8;
+        for (let hx = x + 4; hx < x + w - 4; hx += step) {
           ctx.beginPath();
           ctx.moveTo(hx, wallTop + 8);
           ctx.lineTo(hx, height - 8);
           ctx.stroke();
+        }
+        if (seg.open) {
+          ctx.strokeStyle = "rgba(30, 136, 229, 0.25)";
+          for (let hy = wallTop + 12; hy < height - 12; hy += 14) {
+            ctx.beginPath();
+            ctx.moveTo(x + 6, hy);
+            ctx.lineTo(x + w - 6, hy + 6);
+            ctx.stroke();
+          }
         }
       } else {
         ctx.fillStyle = GAP_HATCH;

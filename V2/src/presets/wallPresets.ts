@@ -14,31 +14,31 @@ function layer(materialId: string, thicknessMm: number): Layer {
   return { id: crypto.randomUUID(), materialId, thicknessMm };
 }
 
-/** Toit 35° sud : tuiles + lame ventilée + Al + laine de roche + placo. */
+/** Toit 35° sud : couverture + lame ventilée + Al + laine de roche + placo. */
 export function roofTileSouthPreset(): WallPreset {
   return {
     id: "roof-tile-south",
     name: "Toit 35° sud — tuiles",
     facade: { tiltFromHorizontal: 35, azimuthFacing: 180 },
     layers: [
-      layer("tuile", 20),
+      layer("brique-creuse", 20),
       layer("lame-air-ventilee", 40),
       layer("feuille-alu", 1),
       layer("laine-roche", 200),
-      layer("placo", 13),
+      layer("plaque-platre", 13),
     ],
   };
 }
 
-/** Mur sud : béton armé + EPS + plâtre. */
+/** Mur sud : béton + polystyrène expansé + plâtre. */
 export function wallConcreteSouthPreset(): WallPreset {
   return {
     id: "wall-concrete-south",
     name: "Mur sud — béton + EPS",
     facade: { tiltFromHorizontal: 90, azimuthFacing: 180 },
     layers: [
-      layer("beton-arme", 200),
-      layer("eps", 100),
+      layer("beton", 200),
+      layer("polystyrene-expanse", 100),
       layer("platre", 13),
     ],
   };
@@ -51,10 +51,10 @@ export function wallTimberFramePreset(): WallPreset {
     name: "Mur ossature bois",
     facade: { tiltFromHorizontal: 90, azimuthFacing: 180 },
     layers: [
-      layer("crepi", 10),
-      layer("bois", 18),
+      layer("crepi-sable", 10),
+      layer("osb", 18),
       layer("laine-bois", 200),
-      layer("bois", 18),
+      layer("osb", 18),
       layer("platre", 13),
     ],
   };

@@ -37,6 +37,11 @@ export function hVentilatedCavity(thicknessMm: number): number {
   return 12;
 }
 
+/** Lame d'air ouverte (sous panneau solaire, ventilation naturelle renforcée), W/m²·K */
+export function hOpenCavity(thicknessMm: number): number {
+  return hVentilatedCavity(thicknessMm) * 1.35;
+}
+
 /**
  * Convection dans une cavité d'air fermée non ventilée.
  * Dépend de l'épaisseur et de l'inclinaison de la paroi porteuse.

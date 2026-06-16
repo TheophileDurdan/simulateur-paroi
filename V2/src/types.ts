@@ -1,8 +1,16 @@
-export type MaterialKind = "solid" | "air_gap" | "air_gap_ventilated" | "thin_film";
+export type MaterialKind =
+  | "solid"
+  | "air_gap"
+  | "air_gap_ventilated"
+  | "air_gap_open"
+  | "thin_film";
+
+export type MaterialCategory = "murs" | "isolants" | "finition" | "autre";
 
 export interface MaterialPreset {
   id: string;
   name: string;
+  category: MaterialCategory;
   kind: MaterialKind;
   rho: number;
   cp: number;

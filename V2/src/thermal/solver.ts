@@ -1,5 +1,5 @@
 import type { FacadeOrientation } from "../facadeGeometry";
-import { hCavityConvection, hExterior, hInterior, hVentilatedCavity, ventilationHeatCoeff } from "./convection";
+import { hCavityConvection, hExterior, hInterior, hOpenCavity, hVentilatedCavity, ventilationHeatCoeff } from "./convection";
 import {
   buildMesh,
   interfaceLambda,
@@ -120,7 +120,7 @@ export class ThermalSolver {
     const iface = this.mesh.interfaces[i];
     if (iface?.gap?.ventilated) {
       const g = iface.gap;
-      const hV = hVentilatedCavity(g.thicknessMm);
+      const hV = g.open ? hOpenCavity(g.thicknessMm) : hVentilatedCavity(g.thicknessMm);
       return (
         hV * (temps[i] - tExt) +
         radiantFluxT4(temps[i], temps[i + 1], g.epsilonLeft, g.epsilonRight)
@@ -139,7 +139,7 @@ export class ThermalSolver {
     const iface = this.mesh.interfaces[i - 1];
     if (iface?.gap?.ventilated) {
       const g = iface.gap;
-      const hV = hVentilatedCavity(g.thicknessMm);
+      const hV = g.open ? hOpenCavity(g.thicknessMm) : hVentilatedCavity(g.thicknessMm);
       return (
         radiantFluxT4(temps[i - 1], temps[i], g.epsilonLeft, g.epsilonRight) +
         hV * (tExt - temps[i])
