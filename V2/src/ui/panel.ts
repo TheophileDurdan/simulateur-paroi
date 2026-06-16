@@ -13,6 +13,7 @@ import { DEFAULT_SOLAR_SITE, type SolarSite } from "../facadeGeometry";
 import { defaultWallPreset } from "../presets/wallPresets";
 import { createFacadeWidget3D, type FacadeWidgetHandle } from "./facadeWidget3d";
 import type { ChartSeriesVisibility } from "../render/canvas";
+import { LEGEND_TIPS, TIPS, setNativeTip } from "./tooltips";
 
 export type ChartSeriesId = keyof ChartSeriesVisibility;
 
@@ -79,49 +80,49 @@ export function createPanel(
     <div class="banner-row banner-title">
       <h1>Simulateur paroi</h1>
       <div class="sim-controls">
-        <button id="btn-play" type="button" aria-pressed="false" title="Lancer / mettre en pause la simulation temporelle">▶ Lecture</button>
-        <label title="Facteur de vitesse du temps simulé (1 s réelle → plusieurs secondes simulées)">Vitesse
-          <select id="sel-speed" title="Vitesse de la simulation">
-            <option value="10">×10</option>
-            <option value="100" selected>×100</option>
-            <option value="1000">×1000</option>
+        <button id="btn-play" type="button" aria-pressed="false" title="${TIPS.play}">▶ Lecture</button>
+        <label>Vitesse
+          <select id="sel-speed" title="${TIPS.speed}">
+            <option value="10" title="${TIPS.speed10}">×10</option>
+            <option value="100" selected title="${TIPS.speed100}">×100</option>
+            <option value="1000" title="${TIPS.speed1000}">×1000</option>
           </select>
         </label>
         <button
           id="btn-ext-auto"
           type="button"
           class="active"
-          title="Basculer entre profil horaire extérieur (graphique) et réglage manuel par le thermomètre extérieur"
+          title="${TIPS.extAutoOn}"
         >T ext. manuelle</button>
         <button
           id="btn-reset"
           type="button"
-          title="Réinitialiser les températures (mur, air, cavités) au profil initial"
+          title="${TIPS.resetTemps}"
         >Réinit. T</button>
         <button
           id="btn-fullscreen"
           type="button"
           aria-pressed="false"
-          title="Plein écran"
+          title="${TIPS.fullscreen}"
         >⛶ Plein écran</button>
       </div>
     </div>
     <div class="banner-row banner-wall-presets">
-      <span class="wall-presets-label">Paroi type :</span>
+      <span class="wall-presets-label" title="${TIPS.wallPresets}">Paroi type :</span>
       <div id="wall-preset-buttons" class="wall-preset-buttons"></div>
     </div>
   `;
 
   roots.layersZone.innerHTML = `
     <div class="layers-header">
-      <span>Couches (ext. → int.)</span>
-      <button id="btn-add" type="button">+ Ajouter une couche</button>
+      <span title="${TIPS.layersHeader}">Couches (ext. → int.)</span>
+      <button id="btn-add" type="button" title="${TIPS.addLayer}">+ Ajouter une couche</button>
     </div>
     <div id="layers-list" class="layers-list"></div>
   `;
 
   roots.tempHeader.innerHTML = `
-    <span id="sim-time" class="sim-time">t = 0 s</span>
+    <span id="sim-time" class="sim-time" title="${TIPS.simTime}">t = 0 s</span>
     <span id="read-ext-mode" class="ext-mode-hint"></span>
   `;
 
@@ -132,7 +133,7 @@ export function createPanel(
         <label
           class="legend-item"
           data-series="${item.id}"
-          title="Afficher / masquer la courbe ${item.label.toLowerCase()}"
+          title="${LEGEND_TIPS[item.id]}"
         >
           <input
             type="checkbox"
@@ -211,7 +212,7 @@ export function createPanel(
     btn.className = "wall-preset-btn";
     btn.dataset.preset = preset.id;
     btn.textContent = preset.name;
-    btn.title = preset.name;
+    btn.title = TIPS.wallPreset(preset);
     btn.addEventListener("click", () => {
       activeWallPresetId = preset.id;
       layers = preset.layers.map((l) => ({ ...l, id: crypto.randomUUID() }));
@@ -243,11 +244,11 @@ export function createPanel(
       const disabledAttr = enabled ? "" : "disabled";
       row.innerHTML = `
         <div class="layer-order">
-          <button type="button" class="btn-move" data-dir="-1" title="Monter" ${disabledAttr}>▲</button>
-          <button type="button" class="btn-move" data-dir="1" title="Descendre" ${disabledAttr}>▼</button>
+          <button type="button" class="btn-move" data-dir="-1" title="${TIPS.layerMoveUp}" ${disabledAttr}>▲</button>
+          <button type="button" class="btn-move" data-dir="1" title="${TIPS.layerMoveDown}" ${disabledAttr}>▼</button>
         </div>
-        <input type="color" class="layer-color" value="${layer.color ?? preset.color}" title="Couleur" ${disabledAttr} />
-        <select class="layer-material" ${disabledAttr}>
+        <input type="color" class="layer-color" value="${layer.color ?? preset.color}" title="${TIPS.layerColor}" ${disabledAttr} />
+        <select class="layer-material" title="${TIPS.layerMaterial}" ${disabledAttr}>
           ${MATERIAL_CATEGORIES.map(
             (cat) => `
             <optgroup label="${cat.label}">
@@ -260,7 +261,7 @@ export function createPanel(
             </optgroup>`,
           ).join("")}
         </select>
-        <label class="layer-field">e (mm)
+        <label class="layer-field" title="${TIPS.layerThickness}">e (mm)
           <input type="number" class="layer-thick" min="${isGap ? 5 : isFilm ? 0.1 : 1}" step="${isFilm ? 0.1 : 1}" value="${layer.thicknessMm}" ${disabledAttr} />
         </label>
         ${
@@ -273,27 +274,27 @@ export function createPanel(
                     : "Cavité (conv. + IR)"
               }</span>`
             : isFilm
-              ? `<label class="layer-field" title="Émissivité infrarouge (face cavité)">ε
+              ? `<label class="layer-field" title="${TIPS.layerEpsilon}">ε
           <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" ${disabledAttr} />
         </label>
         <span class="layer-gap-hint">Feuille mince (sans inertie)</span>`
               : `
-        <label class="layer-field">ρ
+        <label class="layer-field" title="${TIPS.layerRho}">ρ
           <input type="number" class="layer-rho" min="1" step="1" value="${layer.rho ?? preset.rho}" ${disabledAttr} />
         </label>
-        <label class="layer-field">cp
+        <label class="layer-field" title="${TIPS.layerCp}">cp
           <input type="number" class="layer-cp" min="1" step="1" value="${layer.cp ?? preset.cp}" ${disabledAttr} />
         </label>
-        <label class="layer-field">λ
+        <label class="layer-field" title="${TIPS.layerLambda}">λ
           <input type="number" class="layer-lambda" min="0.001" step="0.001" value="${layer.lambda ?? preset.lambda}" ${disabledAttr} />
         </label>
-        <label class="layer-field" title="Émissivité infrarouge">ε
+        <label class="layer-field" title="${TIPS.layerEpsilon}">ε
           <input type="number" class="layer-epsilon" min="0.01" max="1" step="0.01" value="${(layer.epsilon ?? preset.epsilon).toFixed(2)}" ${disabledAttr} />
         </label>`
         }
         <div class="layer-actions">
-          <button type="button" class="btn-toggle ${enabled ? "is-enabled" : "is-disabled"}" title="${enabled ? "Désactiver la couche" : "Activer la couche"}">${enabled ? "✓" : "✕"}</button>
-          <button type="button" class="btn-delete" title="Supprimer la couche">🗑</button>
+          <button type="button" class="btn-toggle ${enabled ? "is-enabled" : "is-disabled"}" title="${enabled ? TIPS.layerToggleOff : TIPS.layerToggleOn}">${enabled ? "✓" : "✕"}</button>
+          <button type="button" class="btn-delete" title="${TIPS.layerDelete}">🗑</button>
         </div>
       `;
 
@@ -398,7 +399,7 @@ export function createPanel(
     const on = document.fullscreenElement === appEl;
     btnFullscreen.textContent = on ? "⛶ Quitter plein écran" : "⛶ Plein écran";
     btnFullscreen.setAttribute("aria-pressed", on ? "true" : "false");
-    btnFullscreen.title = on ? "Quitter le plein écran" : "Plein écran";
+    setNativeTip(btnFullscreen, on ? TIPS.exitFullscreen : TIPS.fullscreen);
     document.body.classList.toggle("is-fullscreen", on);
   }
 
@@ -450,19 +451,23 @@ export function createPanel(
       if (state.playing !== lastPlaying) {
         btnPlay.textContent = state.playing ? "⏸ Pause" : "▶ Lecture";
         btnPlay.setAttribute("aria-pressed", state.playing ? "true" : "false");
+        setNativeTip(btnPlay, state.playing ? TIPS.pause : TIPS.play);
         lastPlaying = state.playing;
       }
       if (state.extAuto !== lastExtAuto) {
         btnExtAuto.textContent = state.extAuto ? "T ext. manuelle" : "T ext. auto";
         btnExtAuto.classList.toggle("active", state.extAuto);
+        setNativeTip(btnExtAuto, state.extAuto ? TIPS.extAutoOn : TIPS.extAutoOff);
         lastExtAuto = state.extAuto;
       }
       if (state.extAuto) {
         const h = Math.floor(simTimeToHour(state.simTime));
         const m = Math.floor((simTimeToHour(state.simTime) % 1) * 60);
         readExtMode.textContent = `profil horaire (${h}h${m.toString().padStart(2, "0")})`;
+        setNativeTip(readExtMode, TIPS.extModeAuto);
       } else {
         readExtMode.textContent = "slider ext.";
+        setNativeTip(readExtMode, TIPS.extModeManual);
       }
       const s = state.simTime;
       simTimeEl.textContent =

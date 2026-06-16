@@ -29,6 +29,7 @@ import {
 } from "../presets/climatePresets";
 import type { SchedulePoint } from "../schedule";
 import { DEFAULT_VENTILATION_ACH } from "../types";
+import { TIPS } from "./tooltips";
 
 const SNAP_DEG = 5;
 const WIDGET_SIZE = 150;
@@ -152,7 +153,8 @@ function buildWallAssembly(): THREE.Group {
 
 function presetOptionsHtml(selected: ClimatePresetId): string {
   return CLIMATE_PRESETS.map(
-    (p) => `<option value="${p.id}"${p.id === selected ? " selected" : ""}>${p.label}</option>`,
+    (p) =>
+      `<option value="${p.id}"${p.id === selected ? " selected" : ""} title="${TIPS.seasonOption(p)}">${p.label}</option>`,
   ).join("");
 }
 
@@ -172,7 +174,7 @@ export function createFacadeWidget3D(
       </div>
       <div class="facade-3d-row">
         <div class="facade-3d-col-view">
-          <div id="facade-3d-host" class="facade-3d-host"></div>
+          <div id="facade-3d-host" class="facade-3d-host" title="${TIPS.facade3d}"></div>
           <div class="facade-3d-readouts">
             <span>Incl. <strong id="facade-3d-tilt">90°</strong></span>
             <span>Orient. <strong id="facade-3d-az">Sud</strong></span>
@@ -180,7 +182,7 @@ export function createFacadeWidget3D(
           <span class="facade-3d-hint">Glisser ↔ orientation · ↕ inclinaison</span>
           <label
             class="facade-site-field facade-ventilation-field facade-heating-field"
-            title="Renouvellement d'air du volume intérieur (volumes d'air neufs par heure)"
+            title="${TIPS.ventilation}"
           >Renouvellement air int.
             <input
               id="site-ventilation"
@@ -197,7 +199,7 @@ export function createFacadeWidget3D(
         <div class="facade-3d-site">
           <label
             class="facade-site-field"
-            title="Latitude du site (contrôle la hauteur du soleil et les saisons)"
+            title="${TIPS.latitude}"
           >Latitude
             <input
               id="site-lat"
@@ -211,25 +213,25 @@ export function createFacadeWidget3D(
           </label>
           <label
             class="facade-site-field"
-            title="Choisit un profil de saison (date, climat, températures extérieures)"
+            title="${TIPS.season}"
           >Saison
             <select id="site-preset">${presetOptionsHtml(DEFAULT_CLIMATE_PRESET_ID)}</select>
           </label>
           <label
             class="facade-site-field"
-            title="Date utilisée pour la déclinaison solaire (position du soleil dans l'année)"
+            title="${TIPS.date}"
           >Date
             <input id="site-date" type="date" value="${initialSite.dateISO}" />
           </label>
           <label
             class="facade-site-field"
-            title="Couverture nuageuse : influence le soleil reçu et la température radiative du ciel"
+            title="${TIPS.skyCover}"
           >Couverture du ciel
             <select id="site-sky-cover">${skyCoverOptionsHtml(initialSite.skyCover)}</select>
           </label>
           <label
             class="facade-site-field facade-heating-field"
-            title="Apport thermique uniforme à l'air intérieur (chauffage + / climatisation −) en W/m²"
+            title="${TIPS.heating}"
           >Chauffage / clim.
             <input
               id="site-heating"

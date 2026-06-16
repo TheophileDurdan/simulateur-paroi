@@ -14,11 +14,17 @@ export function parseSkyCover(value: string): SkyCover {
   return "clear";
 }
 
+export const SKY_COVER_TIPS: Record<SkyCover, string> = {
+  clear: "Ciel dégagé — soleil maximal, ciel froid la nuit (fort refroidissement radiatif)",
+  hazy: "Ciel voilé — soleil atténué, ciel intermédiaire",
+  overcast: "Ciel couvert — peu de direct, ciel proche de T air (faible refroidissement radiatif)",
+};
+
 function skyCoverOptionsHtml(selected: SkyCover): string {
   return (Object.keys(SKY_COVER_LABELS) as SkyCover[])
     .map(
       (id) =>
-        `<option value="${id}"${id === selected ? " selected" : ""}>${SKY_COVER_LABELS[id]}</option>`,
+        `<option value="${id}"${id === selected ? " selected" : ""} title="${SKY_COVER_LABELS[id]} — ${SKY_COVER_TIPS[id]}">${SKY_COVER_LABELS[id]}</option>`,
     )
     .join("");
 }

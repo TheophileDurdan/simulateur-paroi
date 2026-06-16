@@ -38,6 +38,7 @@ import {
 import { interpolateSolar } from "./solarSchedule";
 import { ThermalSolver } from "./thermal/solver";
 import { createPanel, type ChartSeriesId } from "./ui/panel";
+import { TIPS, setNativeTip } from "./ui/tooltips";
 import type { Layer, SimSpeed } from "./types";
 import { G_MAX, INITIAL_TEMP, MIN_DT } from "./types";
 
@@ -66,6 +67,10 @@ let draggingExt = false;
 let scheduleDrag: ScheduleDragState | null = null;
 let solarDrag: ScheduleDragState | null = null;
 let seriesVisible: ChartSeriesVisibility = { ...DEFAULT_SERIES_VISIBILITY };
+
+setNativeTip(solarChartCanvas, TIPS.solarChart);
+setNativeTip(tempChartCanvas, TIPS.tempChart);
+setNativeTip(wallCanvas, TIPS.wallView);
 
 const panel = createPanel(
   {
@@ -258,6 +263,10 @@ function wallLayout() {
 
 function draw() {
   resize();
+  setNativeTip(
+    wallCanvas,
+    extAuto ? TIPS.wallView : `${TIPS.wallView} ${TIPS.wallViewManual}`,
+  );
 
   const chartRange = chartTempDisplayRange();
   const history = thermalHistory.last24h(solver.simTime);

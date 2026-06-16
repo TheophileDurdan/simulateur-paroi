@@ -25,7 +25,7 @@
           <section id="zone-site" class="zone zone-site">
             <div class="zone-site-row">
               <div id="facade-host"></div>
-              <div class="solar-chart-panel">
+              <div class="solar-chart-panel" title="Rayonnement solaire reçu par la paroi — profil horaire éditable à la souris">
                 <canvas id="solar-chart-canvas"></canvas>
               </div>
             </div>
@@ -33,14 +33,17 @@
           <section id="zone-layers" class="zone zone-layers"></section>
           <section id="zone-temp" class="zone zone-temp">
             <div id="temp-zone-header"></div>
-            <div class="temp-chart-panel">
+            <div class="temp-chart-panel" title="Profil horaire de température extérieure — éditable à la souris en mode T ext. auto">
               <canvas id="temp-chart-canvas"></canvas>
             </div>
             <div id="temp-legend"></div>
           </section>
         </aside>
         <main id="right-column">
-          <canvas id="wall-canvas"></canvas>
+          <canvas
+            id="wall-canvas"
+            title="Coupe de la paroi : barres colorées = températures. Thermomètres air ext. (gauche) et int. (droite)."
+          ></canvas>
         </main>
       </div>
     </div>
