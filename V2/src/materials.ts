@@ -277,7 +277,7 @@ export const MATERIALS: MaterialPreset[] = [
   },
   {
     id: "lame-air-ventilee",
-    name: "Lame d'air ventilée (grille de ventilation)",
+    name: "Lame d'air ventilée",
     category: "autre",
     kind: "air_gap_ventilated",
     rho: 0,
@@ -289,7 +289,7 @@ export const MATERIALS: MaterialPreset[] = [
   },
   {
     id: "lame-air-ouverte",
-    name: "Lame d'air ouverte (sous panneau solaire)",
+    name: "Lame d'air ouverte",
     category: "autre",
     kind: "air_gap_open",
     rho: 0,
