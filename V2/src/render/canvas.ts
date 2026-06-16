@@ -104,8 +104,11 @@ function drawTempBar(
   const h = layout.baselineY - fillTop;
   if (h <= 0) return;
 
+  ctx.save();
+  ctx.globalAlpha = 0.5;
   ctx.fillStyle = tempToBarColor(temp);
   ctx.fillRect(x, fillTop, width, h);
+  ctx.restore();
 
   if (interactive) {
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
