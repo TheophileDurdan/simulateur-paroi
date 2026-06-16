@@ -1,5 +1,3 @@
-import type { FacadeOrientation, SolarSite } from "../facadeGeometry";
-import { solarPercentAt } from "../facadeGeometry";
 import type { TempSample, ThermalHistoryData } from "../thermalHistory";
 import { feltIntSeries } from "../thermalHistory";
 import {
@@ -264,8 +262,7 @@ export function drawSolarChartPanel(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
   canvasHeight: number,
-  facade: FacadeOrientation,
-  site: SolarSite,
+  solarPoints: HourlyPoint[],
   simTimeSec: number,
   facadeSummary: string,
 ) {
@@ -279,7 +276,7 @@ export function drawSolarChartPanel(
     0,
     canvasHeight,
     solarG,
-    [],
+    solarPoints,
     simTimeSec,
     {
       bg: "#fff8e7",
@@ -291,9 +288,9 @@ export function drawSolarChartPanel(
       unit: "%",
       valueStep: 25,
     },
-    (_pts, h) => solarPercentAt(h, facade, site),
+    (pts, h) => interpolateHourly(pts, h, 0),
     false,
-    false,
+    true,
   );
 }
 

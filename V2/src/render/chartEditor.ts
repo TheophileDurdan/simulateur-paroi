@@ -315,7 +315,7 @@ export function chartMouseDown(
     };
   }
 
-  const value = clampScheduleValue(yToValue(my, g));
+  const value = Math.min(g.valueMax, Math.max(g.valueMin, yToValue(my, g)));
   const next = [...points, { hour, value }];
   return {
     drag: {
@@ -346,7 +346,7 @@ export function chartMouseMove(
   const next = [...points];
   next[drag.pointIndex] = {
     hour: xToHour(mx, g),
-    value: clampScheduleValue(yToValue(my, g)),
+    value: Math.min(g.valueMax, Math.max(g.valueMin, yToValue(my, g))),
   };
   return next;
 }

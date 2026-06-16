@@ -17,6 +17,7 @@ import {
   computeChartTempDisplayRange,
   DEFAULT_SERIES_VISIBILITY,
   drawSolarChartPanel,
+  solarGraphLayout,
   drawTempChartPanel,
   isOnExtBar,
   renderWall,
@@ -58,10 +59,12 @@ let extAuto = true;
 let schedulePoints: SchedulePoint[] = defaultSchedule();
 let facade: FacadeOrientation = { ...defaultPreset.facade };
 let solarSite: SolarSite = { ...DEFAULT_SOLAR_SITE };
+let solarPoints: HourlyPoint[] = [];
 solver.setFacade(facade);
 solver.setSkyCover(solarSite.skyCover);
 let draggingExt = false;
 let scheduleDrag: ScheduleDragState | null = null;
+let solarDrag: ScheduleDragState | null = null;
 let seriesVisible: ChartSeriesVisibility = { ...DEFAULT_SERIES_VISIBILITY };
 
 const panel = createPanel(
@@ -101,10 +104,12 @@ const panel = createPanel(
       solarSite = { ...site };
       solver.setFacade(facade);
       solver.setSkyCover(site.skyCover ?? "clear");
+      rebuildSolarPoints();
     },
     onClimatePresetApply(site, schedule, initialTemp) {
       solarSite = { ...site };
       solver.setSkyCover(site.skyCover ?? "clear");
+      rebuildSolarPoints();
       schedulePoints = schedule.map((p) => ({ ...p }));
       solver.resetTemps();
       solver.tAirInt = initialTemp;
@@ -120,6 +125,7 @@ const panel = createPanel(
       solver.rebuildMesh(layers, false);
       facade = { ...preset.facade };
       solver.setFacade(facade);
+      rebuildSolarPoints();
       solver.resetTemps();
       solver.simTime = 0;
       thermalHistory.clear();
@@ -146,7 +152,7 @@ function currentTExt(): number {
 }
 
 function currentSolarPercent(): number {
-  return interpolateSolar(facade, simTimeToHour(solver.simTime), solarSite);
+  return interpolateHourly(solarPoints, simTimeToHour(solver.simTime), 0);
 }
 
 function facadeChartSummary(): string {
@@ -210,6 +216,17 @@ function tempChartForInteraction() {
   );
 }
 
+function rebuildSolarPoints() {
+  solarPoints = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    value: interpolateSolar(facade, hour, solarSite),
+  }));
+}
+
+function drawSolarChartLayoutForInteraction() {
+  return solarGraphLayout(solarChartCanvas.width, solarChartCanvas.height);
+}
+
 function syncCanvasSize(
   canvas: HTMLCanvasElement,
   container: HTMLElement,
@@ -271,13 +288,13 @@ function draw() {
     solarChartCtx,
     solarChartCanvas.width,
     solarChartCanvas.height,
-    facade,
-    solarSite,
+    solarPoints,
     solver.simTime,
     facadeChartSummary(),
   );
 }
 
+rebuildSolarPoints();
 recordThermalHistory();
 
 let lastFrame = performance.now();
@@ -353,6 +370,27 @@ tempChartCanvas.addEventListener("mousemove", (e) => {
   tempChartCanvas.style.cursor = "default";
 });
 
+solarChartCanvas.addEventListener("mousedown", (e) => {
+  const rect = solarChartCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const g = drawSolarChartLayoutForInteraction();
+  const result = chartMouseDown(mx, my, g, solarPoints);
+  solarPoints = result.points;
+  solarDrag = result.drag;
+  draw();
+});
+
+solarChartCanvas.addEventListener("mousemove", (e) => {
+  const rect = solarChartCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  solarChartCanvas.style.cursor = solarDrag ? "grabbing" : "crosshair";
+  if (!solarDrag) return;
+  const g = drawSolarChartLayoutForInteraction();
+  solarPoints = chartMouseMove(mx, my, g, solarPoints, solarDrag);
+});
+
 wallCanvas.addEventListener("mousedown", (e) => {
   const rect = wallCanvas.getBoundingClientRect();
   const mx = e.clientX - rect.left;
@@ -380,6 +418,10 @@ window.addEventListener("mouseup", () => {
   if (scheduleDrag) {
     schedulePoints = fromHourlyPoints(chartMouseUp(toHourlyPoints(schedulePoints), scheduleDrag));
     scheduleDrag = null;
+  }
+  if (solarDrag) {
+    solarPoints = chartMouseUp(solarPoints, solarDrag);
+    solarDrag = null;
   }
   draggingExt = false;
 });
