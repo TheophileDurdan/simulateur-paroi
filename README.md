@@ -78,16 +78,14 @@ git commit -m "Publication simulateur paroi thermique (open source)"
 
 #### e) Lier le dépôt GitHub
 
-Remplacez `VOTRE-USERNAME` par votre identifiant GitHub :
-
 ```bash
-git remote add origin https://github.com/VOTRE-USERNAME/simulateur-paroi.git
+git remote add origin https://github.com/TheophileDurdan/simulateur-paroi.git
 ```
 
 Si `git remote add` indique que `origin` existe déjà :
 
 ```bash
-git remote set-url origin https://github.com/VOTRE-USERNAME/simulateur-paroi.git
+git remote set-url origin https://github.com/TheophileDurdan/simulateur-paroi.git
 ```
 
 #### f) Envoyer sur GitHub
@@ -109,7 +107,7 @@ git push -u origin main
 ### 4. URL à partager
 
 ```
-https://VOTRE-USERNAME.github.io/simulateur-paroi/
+https://TheophileDurdan.github.io/simulateur-paroi/
 ```
 
 Testez cette URL en navigation privée avant de la poster sur LinkedIn.
